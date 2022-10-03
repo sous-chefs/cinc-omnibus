@@ -20,10 +20,6 @@ package omnibus_packages
 
 build_essential 'cinc-omnibus'
 
-execute 'localectl set-locale LANG=en_US.UTF-8' do
-  not_if { omnibus_locale_set? }
-end
-
 chef_ingredient 'omnibus-toolchain' do
   version 'latest'
   channel :stable

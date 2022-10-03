@@ -129,13 +129,6 @@ module CincOmnibus
         end
       end
 
-      def omnibus_locale_set?
-        locale_cmd = Mixlib::ShellOut.new('localectl')
-        locale_cmd.run_command
-        locale_cmd.error!
-        locale_cmd.stdout.match?(/System Locale: LANG=en_US.UTF-8/)
-      end
-
       def omnibus_env
         node.run_state[:omnibus_env] ||= Hash.new { |hash, key| hash[key] = [] }
       end

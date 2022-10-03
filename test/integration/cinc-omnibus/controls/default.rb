@@ -76,8 +76,4 @@ control 'default' do
     its('exit_status') { should eq 0 }
     its('stderr') { should eq '' }
   end
-
-  describe command 'localectl' do
-    its('stdout') { should match /System Locale: LANG=en_US.UTF-8/ }
-  end
 end
