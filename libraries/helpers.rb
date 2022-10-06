@@ -11,6 +11,8 @@ module CincOmnibus
             automake
             bzip2
             ca-certificates
+            glibc-langpack-en
+            glibc-locale-source
             iproute
             libffi-devel
             ncurses-devel
@@ -23,7 +25,6 @@ module CincOmnibus
             wget
             zlib-devel
           )
-          pkgs << %w(glibc-langpack-en glibc-locale-source) if node['platform_version'].to_i >= 2022
           pkgs.append(omnibus_java_pkg)
           pkgs.flatten.sort
         when 'rhel'

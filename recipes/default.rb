@@ -59,7 +59,7 @@ file File.join(build_user_home, '.gitconfig') do
   group   'omnibus'
   mode    '0644'
   content <<-EOH.gsub(/^ {4}/, '')
-    # This file is written by Chef for #{node['fqdn']}.
+    # This file is written by Cinc
     # Do NOT modify this file by hand.
 
     [user]

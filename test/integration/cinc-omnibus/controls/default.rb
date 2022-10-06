@@ -6,6 +6,8 @@ control 'default' do
     packages = %w(
       automake
       ca-certificates
+      glibc-langpack-en
+      glibc-locale-source
       iproute
       openssh-clients
       rsync
