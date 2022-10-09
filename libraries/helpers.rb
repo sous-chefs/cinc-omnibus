@@ -59,6 +59,7 @@ module CincOmnibus
             iproute2
             libffi-dev
             libssl-dev
+            locales
             locales-all
             ncurses-dev
             openssh-client

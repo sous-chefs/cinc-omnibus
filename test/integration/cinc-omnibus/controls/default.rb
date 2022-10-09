@@ -35,14 +35,25 @@ control 'default' do
   when 'debian', 'ubuntu'
     packages = %w(
       automake
+      binutils
+      bzip2
       ca-certificates
+      devscripts
+      dpkg-dev
+      fakeroot
+      gnupg
       iproute2
+      libffi-dev
       libssl-dev
+      locales
       locales-all
+      ncurses-dev
       openssh-client
       rsync
+      tar
       tzdata
       wget
+      zlib1g-dev
     )
   when 'opensuse'
     packages = %w(
