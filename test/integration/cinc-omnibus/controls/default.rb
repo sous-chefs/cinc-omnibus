@@ -63,6 +63,8 @@ control 'default' do
     packages = %w(
       automake
       curl
+      glibc-i18ndata
+      glibc-locale
       gzip
       hostname
       iproute2

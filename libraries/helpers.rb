@@ -76,6 +76,8 @@ module CincOmnibus
             automake
             bzip2
             curl
+            glibc-i18ndata
+            glibc-locale
             gzip
             hostname
             iproute2
