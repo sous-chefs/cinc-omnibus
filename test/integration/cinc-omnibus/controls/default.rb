@@ -44,7 +44,6 @@ control 'default' do
       gnupg
       iproute2
       libffi-dev
-      libncurses-dev
       libssl-dev
       locales
       locales-all
@@ -55,6 +54,11 @@ control 'default' do
       wget
       zlib1g-dev
     )
+    packages << if os_version.to_i == 9 || os_version == '18.04'
+                  %w(libncurses5-dev)
+                else
+                  %w(libncurses-dev)
+                end
   when 'opensuse'
     packages = %w(
       automake
