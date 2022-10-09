@@ -44,10 +44,10 @@ control 'default' do
       gnupg
       iproute2
       libffi-dev
+      libncurses-dev
       libssl-dev
       locales
       locales-all
-      ncurses-dev
       openssh-client
       rsync
       tar
