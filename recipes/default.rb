@@ -21,6 +21,10 @@ package omnibus_packages
 build_essential 'cinc-omnibus'
 
 chef_ingredient 'omnibus-toolchain' do
+  # Chef doesn't have EL9 on ppc64le yet
+  if ppc64le? && el? && node['platform_version'].to_i == 9
+    rubygems_url 'https://packagecloud.io/cinc-project/stable'
+  end
   version 'latest'
   channel :stable
   architecture node['kernel']['machine']
