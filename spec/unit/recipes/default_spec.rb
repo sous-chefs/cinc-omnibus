@@ -19,20 +19,20 @@
 require 'spec_helper'
 
 describe 'cinc-omnibus::default' do
-  context 'When all attributes are default, on Ubuntu 18.04' do
+  context 'When all attributes are default, on Ubuntu' do
     # for a complete list of available platforms and versions see:
     # https://github.com/chefspec/fauxhai/blob/master/PLATFORMS.md
-    platform 'ubuntu', '18.04'
+    platform 'ubuntu'
 
     it 'converges successfully' do
       expect { chef_run }.to_not raise_error
     end
   end
 
-  context 'When all attributes are default, on CentOS 7' do
+  context 'When all attributes are default, on CentOS' do
     # for a complete list of available platforms and versions see:
     # https://github.com/chefspec/fauxhai/blob/master/PLATFORMS.md
-    platform 'centos', '7'
+    platform 'centos'
 
     it 'converges successfully' do
       expect { chef_run }.to_not raise_error
