@@ -4,6 +4,8 @@ This file is used to list changes made in each version of the cinc-omnibus cookb
 
 ## Unreleased
 
+- Create symlink for mkdir for Debian on ARM
+
 ## 1.0.0 - *2022-10-17*
 
 - Initial release focused on Linux platforms
