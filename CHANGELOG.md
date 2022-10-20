@@ -2,7 +2,7 @@
 
 This file is used to list changes made in each version of the cinc-omnibus cookbook.
 
-## Unreleased
+## 1.0.1 - *2022-10-20*
 
 - Create symlink for mkdir for Debian on ARM
 
