@@ -139,3 +139,10 @@ file ::File.join(build_user_home, 'load-omnibus-toolchain.sh') do
 end
 
 cookbook_file '/usr/local/share/ruby-docker-copy-patch.rb'
+
+# Fix a problem only on Debian on ARM which results in:
+# make: /usr/bin/mkdir: No such file or directory
+link '/usr/bin/mkdir' do
+  to '/bin/mkdir'
+  only_if { arm? && debian_platform? }
+end
