@@ -16,15 +16,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-package omnibus_packages
+package omnibus_packages if omnibus_packages
 
 build_essential 'cinc-omnibus'
 
 chef_ingredient 'omnibus-toolchain' do
-  # Chef doesn't have EL9 on ppc64le yet
-  if ppc64le? && el? && node['platform_version'].to_i == 9
-    rubygems_url 'https://packagecloud.io/cinc-project/stable'
-  end
+  # Chef doesn't have some platforms on ppc64le yet
+  rubygems_url 'https://packagecloud.io/cinc-project/stable' if cinc_omnibus?
   version 'latest'
   channel :stable
   architecture node['kernel']['machine']

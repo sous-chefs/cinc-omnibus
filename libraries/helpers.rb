@@ -99,13 +99,8 @@ module CincOmnibus
       def omnibus_java_pkg
         case node['platform']
         when 'amazon'
-          case node['platform_version'].to_i
-          when 2
-            'java-11-amazon-corretto-headless'
-          when 2022
-            'java-17-amazon-corretto-headless'
-          end
-        when 'centos', 'redhat'
+          'java-17-amazon-corretto-headless'
+        when 'centos', 'redhat', 'almalinux', 'rocky'
           case node['platform_version'].to_i
           when 7
             'java-11-openjdk-devel'
@@ -114,10 +109,10 @@ module CincOmnibus
           end
         when 'debian'
           case node['platform_version'].to_i
-          when 9
-            'openjdk-8-jdk-headless'
-          else
+          when 10, 11
             'openjdk-11-jdk-headless'
+          else
+            'openjdk-17-jdk-headless'
           end
         when 'ubuntu'
           case node['platform_version']
@@ -139,7 +134,7 @@ module CincOmnibus
 
       def toolchain_install_dir
         if windows?
-          windows_safe_path_join(ENV['SYSTEMDRIVE'], 'opscode', 'omnibus-toolchain')
+          windows_safe_path_join(windows_system_drive, 'opscode', 'omnibus-toolchain')
         else
           '/opt/omnibus-toolchain'
         end
@@ -159,10 +154,14 @@ module CincOmnibus
         if mac_os_x?
           '/Users/omnibus'
         elsif windows?
-          windows_safe_path_join(ENV['SYSTEMDRIVE'], 'omnibus')
+          windows_safe_path_join(windows_system_drive, 'omnibus')
         else
           '/home/omnibus'
         end
+      end
+
+      def windows_system_drive
+        ENV['SYSTEMDRIVE'] || 'C:'
       end
 
       def build_user_shell
@@ -170,6 +169,18 @@ module CincOmnibus
           windows_safe_path_join(toolchain_install_dir, 'embedded', 'bin', 'usr', 'bin', 'bash')
         else
           ::File.join(toolchain_install_dir, 'bin', 'bash')
+        end
+      end
+
+      def cinc_omnibus?
+        if ppc64le? && el? && node['platform_version'].to_i == 9
+          true
+        elsif ppc64le? && debian?
+          true
+        elsif ppc64le? && ubuntu?
+          true
+        else
+          false
         end
       end
     end

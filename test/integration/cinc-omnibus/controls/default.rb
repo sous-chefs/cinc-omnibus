@@ -1,4 +1,5 @@
 os_version = os.release
+path = '/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin'
 
 control 'default' do
   case os.name
@@ -15,7 +16,7 @@ control 'default' do
       tzdata
       wget
     )
-  when 'centos', 'redhat'
+  when 'centos', 'redhat', 'almalinux'
     packages = %w(
       automake
       bzip2
@@ -94,5 +95,25 @@ control 'default' do
   describe command '/home/omnibus/load-omnibus-toolchain.sh' do
     its('exit_status') { should eq 0 }
     its('stderr') { should eq '' }
+  end
+
+  [
+    'bash --version',
+    'berks --version',
+    'bundle --version',
+    'curl --version',
+    'gcc --version',
+    'gem --version',
+    'git --version',
+    'java -version',
+    'make --version',
+    'patch --version',
+    'pkg-config --version',
+    'ruby --version',
+    'tar --version',
+  ].each do |cmd|
+    describe command "PATH='/opt/omnibus-toolchain/bin:/usr/local/bin:#{path}' #{cmd}" do
+      its('exit_status') { should eq 0 }
+    end
   end
 end
