@@ -19,23 +19,119 @@
 require 'spec_helper'
 
 describe 'cinc-omnibus::default' do
-  context 'When all attributes are default, on Ubuntu' do
-    # for a complete list of available platforms and versions see:
-    # https://github.com/chefspec/fauxhai/blob/master/PLATFORMS.md
+  context 'ubuntu' do
     platform 'ubuntu'
 
-    it 'converges successfully' do
-      expect { chef_run }.to_not raise_error
+    it { expect { chef_run }.to_not raise_error }
+
+    it do
+      is_expected.to upgrade_chef_ingredient('omnibus-toolchain').with(
+        rubygems_url: nil,
+        version: 'latest',
+        channel: :stable,
+        architecture: 'x86_64',
+        platform: nil,
+        platform_version_compatibility_mode: true
+      )
+    end
+
+    context 'ubuntu - ppc64le' do
+      automatic_attributes['kernel']['machine'] = 'ppc64le'
+
+      it { expect { chef_run }.to_not raise_error }
+      it do
+        is_expected.to upgrade_chef_ingredient('omnibus-toolchain').with(
+          rubygems_url: 'https://packagecloud.io/cinc-project/stable',
+          version: 'latest',
+          channel: :stable,
+          architecture: 'ppc64le',
+          platform: nil,
+          platform_version_compatibility_mode: true
+        )
+      end
     end
   end
 
-  context 'When all attributes are default, on CentOS' do
-    # for a complete list of available platforms and versions see:
-    # https://github.com/chefspec/fauxhai/blob/master/PLATFORMS.md
-    platform 'centos'
+  context 'opensuse' do
+    platform 'opensuse'
 
-    it 'converges successfully' do
-      expect { chef_run }.to_not raise_error
+    it { expect { chef_run }.to_not raise_error }
+    it do
+      is_expected.to upgrade_chef_ingredient('omnibus-toolchain').with(
+        rubygems_url: nil,
+        version: 'latest',
+        channel: :stable,
+        architecture: 'x86_64',
+        platform: 'sles',
+        platform_version_compatibility_mode: true
+      )
     end
   end
+
+  context 'windows' do
+    platform 'windows'
+
+    it { expect { chef_run }.to_not raise_error }
+    it do
+      is_expected.to install_chef_ingredient('omnibus-toolchain').with(
+        rubygems_url: nil,
+        version: 'latest',
+        channel: :stable,
+        architecture: 'x86_64',
+        platform: nil,
+        platform_version_compatibility_mode: true
+      )
+    end
+  end
+
+  context 'debian - ppc64le' do
+    platform 'debian'
+    automatic_attributes['kernel']['machine'] = 'ppc64le'
+
+    it { expect { chef_run }.to_not raise_error }
+    it do
+      is_expected.to upgrade_chef_ingredient('omnibus-toolchain').with(
+        rubygems_url: 'https://packagecloud.io/cinc-project/stable',
+        version: 'latest',
+        channel: :stable,
+        architecture: 'ppc64le',
+        platform: nil,
+        platform_version_compatibility_mode: true
+      )
+    end
+  end
+
+  context 'almalinux 8 - ppc64le' do
+    platform 'almalinux', '8'
+    automatic_attributes['kernel']['machine'] = 'ppc64le'
+
+    it { expect { chef_run }.to_not raise_error }
+    it do
+      is_expected.to upgrade_chef_ingredient('omnibus-toolchain').with(
+        rubygems_url: nil,
+        version: 'latest',
+        channel: :stable,
+        architecture: 'ppc64le',
+        platform: nil,
+        platform_version_compatibility_mode: true
+      )
+    end
+  end
+
+  # TODO: Uncomment when latest fauxhai-ng is released
+  # context 'almalinux 9 - ppc64le' do
+  #   platform 'almalinux', '9'
+  #   automatic_attributes['kernel']['machine'] = 'ppc64le'
+  #
+  #   it do
+  #     is_expected.to upgrade_chef_ingredient('omnibus-toolchain').with(
+  #       rubygems_url: 'https://packagecloud.io/cinc-project/stable',
+  #       version: 'latest',
+  #       channel: :stable,
+  #       architecture: 'ppc64le',
+  #       platform: nil,
+  #       platform_version_compatibility_mode: true
+  #     )
+  #   end
+  # end
 end
