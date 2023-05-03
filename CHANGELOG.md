@@ -2,7 +2,7 @@
 
 This file is used to list changes made in each version of the cinc-omnibus cookbook.
 
-## Unreleased
+## 1.1.0 - *2023-05-03*
 
 - Add support for ppc64le on Debian & Ubuntu
 - Add support for:
