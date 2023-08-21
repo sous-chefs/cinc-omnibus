@@ -2,7 +2,7 @@
 
 This file is used to list changes made in each version of the cinc-omnibus cookbook.
 
-## Unreleased
+## 1.1.3 - *2023-08-21*
 
 - Exclude mkdir fix for Debian 12 on AArch64
 
