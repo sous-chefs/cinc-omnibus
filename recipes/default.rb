@@ -138,9 +138,9 @@ end
 
 cookbook_file '/usr/local/share/ruby-docker-copy-patch.rb'
 
-# Fix a problem only on Debian on ARM which results in:
+# Fix a problem only on Debian 11 and older on ARM which results in:
 # make: /usr/bin/mkdir: No such file or directory
 link '/usr/bin/mkdir' do
   to '/bin/mkdir'
-  only_if { arm? && debian_platform? }
+  only_if { arm? && debian_platform? && node['platform_version'].to_i < 12 }
 end
