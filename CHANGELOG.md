@@ -4,6 +4,8 @@ This file is used to list changes made in each version of the cinc-omnibus cookb
 
 ## Unreleased
 
+- Exclude mkdir fix for Debian 12 on AArch64
+
 ## 1.1.2 - *2023-07-10*
 
 ## 1.1.1 - *2023-05-16*

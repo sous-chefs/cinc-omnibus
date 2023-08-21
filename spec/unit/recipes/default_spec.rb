@@ -118,20 +118,19 @@ describe 'cinc-omnibus::default' do
     end
   end
 
-  # TODO: Uncomment when latest fauxhai-ng is released
-  # context 'almalinux 9 - ppc64le' do
-  #   platform 'almalinux', '9'
-  #   automatic_attributes['kernel']['machine'] = 'ppc64le'
-  #
-  #   it do
-  #     is_expected.to upgrade_chef_ingredient('omnibus-toolchain').with(
-  #       rubygems_url: 'https://packagecloud.io/cinc-project/stable',
-  #       version: 'latest',
-  #       channel: :stable,
-  #       architecture: 'ppc64le',
-  #       platform: nil,
-  #       platform_version_compatibility_mode: true
-  #     )
-  #   end
-  # end
+  context 'almalinux 9 - ppc64le' do
+    platform 'almalinux', '9'
+    automatic_attributes['kernel']['machine'] = 'ppc64le'
+
+    it do
+      is_expected.to upgrade_chef_ingredient('omnibus-toolchain').with(
+        rubygems_url: 'https://packagecloud.io/cinc-project/stable',
+        version: 'latest',
+        channel: :stable,
+        architecture: 'ppc64le',
+        platform: nil,
+        platform_version_compatibility_mode: true
+      )
+    end
+  end
 end
