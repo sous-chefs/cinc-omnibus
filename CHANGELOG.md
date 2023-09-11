@@ -2,6 +2,8 @@
 
 This file is used to list changes made in each version of the cinc-omnibus cookbook.
 
+## Unreleased
+
 ## 1.1.4 - *2023-09-11*
 
 ## 1.1.3 - *2023-08-21*
