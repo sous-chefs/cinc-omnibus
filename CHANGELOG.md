@@ -4,7 +4,11 @@ This file is used to list changes made in each version of the cinc-omnibus cookb
 
 ## Unreleased
 
+- Add fixes for missing install path for Debian 11 and older on AArch64
+
 ## 1.1.4 - *2023-09-11*
+
+- Update actions/checkout action to v4 (#12)
 
 ## 1.1.3 - *2023-08-21*
 
@@ -12,7 +16,11 @@ This file is used to list changes made in each version of the cinc-omnibus cookb
 
 ## 1.1.2 - *2023-07-10*
 
+- Update sous-chefs/.github action to v2.0.5 (#10)
+
 ## 1.1.1 - *2023-05-16*
+
+- Update sous-chefs/.github action to v2.0.4 (#9)
 
 ## 1.1.0 - *2023-05-03*
 
