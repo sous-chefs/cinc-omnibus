@@ -2,7 +2,7 @@
 
 This file is used to list changes made in each version of the cinc-omnibus cookbook.
 
-## Unreleased
+## 1.1.5 - *2023-09-21*
 
 - Add fixes for missing install path for Debian 11 and older on AArch64
 
