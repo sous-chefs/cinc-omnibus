@@ -20,6 +20,10 @@ package omnibus_packages if omnibus_packages
 
 build_essential 'cinc-omnibus'
 
+package omnibus_unsafe_deps do
+  action :remove
+end if omnibus_unsafe_deps
+
 chef_ingredient 'omnibus-toolchain' do
   # Chef doesn't have some platforms on ppc64le yet
   rubygems_url 'https://packagecloud.io/cinc-project/stable' if cinc_omnibus?

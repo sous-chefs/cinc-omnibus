@@ -78,9 +78,22 @@ control 'default' do
     )
   end
 
+  case os.family
+  when 'amazon', 'redhat', 'fedora', 'suse'
+    unsafe_pkgs = %w(pcre2-devel libselinux-devel)
+  when 'debian'
+    unsafe_pkgs = %w(libpcre2-dev libselinux1-dev)
+  end
+
   packages.flatten.sort.each do |pkg|
     describe package pkg do
       it { should be_installed }
+    end
+  end
+
+  unsafe_pkgs.each do |pkg|
+    describe package pkg do
+      it { should_not be_installed }
     end
   end
 
