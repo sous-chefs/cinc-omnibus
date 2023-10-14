@@ -128,6 +128,15 @@ module CincOmnibus
         end
       end
 
+      def omnibus_unsafe_deps
+        case node['platform_family']
+        when 'amazon', 'rhel', 'fedora', 'suse'
+          %w(pcre2-devel libselinux-devel)
+        when 'debian'
+          %w(libpcre2-dev libselinux1-dev)
+        end
+      end
+
       def omnibus_env
         node.run_state[:omnibus_env] ||= Hash.new { |hash, key| hash[key] = [] }
       end
