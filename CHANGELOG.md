@@ -2,7 +2,7 @@
 
 This file is used to list changes made in each version of the cinc-omnibus cookbook.
 
-## Unreleased
+## 1.1.7 - *2023-10-14*
 
 - Ensure "unsafe" development packages are removed
 
