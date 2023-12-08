@@ -4,6 +4,9 @@ This file is used to list changes made in each version of the cinc-omnibus cookb
 
 ## Unreleased
 
+- Install perl-FindBin & perl-lib on EL 9 and AmazonLinux (needed for OpenSSL v3)
+- Install devtoolset-11-toolchain on EL 7 (needed for newer git)
+
 ## 1.1.10 - *2023-12-08*
 
 - Ensure Perl IPC-Cmd is installed on EL based systems which is required for building OpenSSL v3

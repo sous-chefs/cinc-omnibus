@@ -17,7 +17,9 @@ module CincOmnibus
             libffi-devel
             ncurses-devel
             openssh-clients
+            perl-FindBin
             perl-IPC-Cmd
+            perl-lib
             rpm-build
             rpm-sign
             rsync
@@ -45,7 +47,9 @@ module CincOmnibus
             wget
             zlib-devel
           )
+          pkgs << %w(centos-release-scl) if node['platform_version'].to_i == 7
           pkgs << %w(glibc-langpack-en glibc-locale-source) if node['platform_version'].to_i >= 8
+          pkgs << %w(perl-FindBin perl-lib) if node['platform_version'].to_i >= 9
           pkgs.append(omnibus_java_pkg)
           pkgs.flatten.sort
         when 'debian'

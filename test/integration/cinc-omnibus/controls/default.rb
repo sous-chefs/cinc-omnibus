@@ -11,7 +11,9 @@ control 'default' do
       glibc-locale-source
       iproute
       openssh-clients
+      perl-FindBin
       perl-IPC-Cmd
+      perl-lib
       rsync
       tar
       tzdata
@@ -34,7 +36,9 @@ control 'default' do
       wget
       zlib-devel
     )
+    packages << %w(centos-release-scl devtoolset-11-toolchain) if os_version.to_i == 7
     packages << %w(glibc-langpack-en glibc-locale-source) if os_version.to_i >= 8
+    packages << %w(perl-FindBin perl-lib) if os_version.to_i >= 9
   when 'debian', 'ubuntu'
     packages = %w(
       automake
