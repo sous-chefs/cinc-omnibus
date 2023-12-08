@@ -4,6 +4,9 @@ This file is used to list changes made in each version of the cinc-omnibus cookb
 
 ## Unreleased
 
+- Only install perl-FindBin perl-lib on newer AmazonLinux releases
+- Install devtoolset-10 instead of devtoolset-11 since the aarch64 install is broken
+
 ## 1.1.11 - *2023-12-08*
 
 - Install perl-FindBin & perl-lib on EL 9 and AmazonLinux (needed for OpenSSL v3)
