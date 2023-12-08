@@ -2,6 +2,8 @@
 
 This file is used to list changes made in each version of the cinc-omnibus cookbook.
 
+## Unreleased
+
 ## 1.1.11 - *2023-12-08*
 
 - Install perl-FindBin & perl-lib on EL 9 and AmazonLinux (needed for OpenSSL v3)
