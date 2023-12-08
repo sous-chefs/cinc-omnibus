@@ -2,6 +2,8 @@
 
 This file is used to list changes made in each version of the cinc-omnibus cookbook.
 
+## Unreleased
+
 ## 1.1.10 - *2023-12-08*
 
 - Ensure Perl IPC-Cmd is installed on EL based systems which is required for building OpenSSL v3
