@@ -2,7 +2,7 @@
 
 This file is used to list changes made in each version of the cinc-omnibus cookbook.
 
-## Unreleased
+## 1.1.12 - *2023-12-08*
 
 - Only install perl-FindBin perl-lib on newer AmazonLinux releases
 - Install devtoolset-10 instead of devtoolset-11 since the aarch64 install is broken
