@@ -17,7 +17,7 @@
 # limitations under the License.
 
 package omnibus_packages if omnibus_packages
-package 'devtoolset-11-toolchain' if centos? && node['platform_version'].to_i == 7
+package 'devtoolset-10' if centos? && node['platform_version'].to_i == 7
 
 build_essential 'cinc-omnibus'
 

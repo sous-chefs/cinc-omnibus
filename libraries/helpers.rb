@@ -17,9 +17,7 @@ module CincOmnibus
             libffi-devel
             ncurses-devel
             openssh-clients
-            perl-FindBin
             perl-IPC-Cmd
-            perl-lib
             rpm-build
             rpm-sign
             rsync
@@ -28,6 +26,7 @@ module CincOmnibus
             wget
             zlib-devel
           )
+          pkgs << %w(perl-FindBin perl-lib) if node['platform_version'].to_i >= 2022
           pkgs.append(omnibus_java_pkg)
           pkgs.flatten.sort
         when 'rhel'
