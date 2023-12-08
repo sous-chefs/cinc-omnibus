@@ -17,6 +17,7 @@ module CincOmnibus
             libffi-devel
             ncurses-devel
             openssh-clients
+            perl-IPC-Cmd
             rpm-build
             rpm-sign
             rsync
@@ -35,6 +36,7 @@ module CincOmnibus
             iproute
             libffi-devel
             openssh-clients
+            perl-IPC-Cmd
             rpm-build
             rpm-sign
             rsync

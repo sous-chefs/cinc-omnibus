@@ -11,6 +11,7 @@ control 'default' do
       glibc-locale-source
       iproute
       openssh-clients
+      perl-IPC-Cmd
       rsync
       tar
       tzdata
@@ -24,6 +25,7 @@ control 'default' do
       iproute
       libffi-devel
       openssh-clients
+      perl-IPC-Cmd
       rpm-build
       rpm-sign
       rsync
