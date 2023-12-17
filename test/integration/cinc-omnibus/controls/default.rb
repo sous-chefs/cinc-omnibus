@@ -10,6 +10,7 @@ control 'default' do
       glibc-langpack-en
       glibc-locale-source
       iproute
+      libtool
       openssh-clients
       perl-IPC-Cmd
       rsync
@@ -25,6 +26,7 @@ control 'default' do
       ca-certificates
       iproute
       libffi-devel
+      libtool
       openssh-clients
       perl-IPC-Cmd
       rpm-build
@@ -51,6 +53,7 @@ control 'default' do
       iproute2
       libffi-dev
       libssl-dev
+      libtool
       locales
       locales-all
       openssh-client
@@ -74,6 +77,7 @@ control 'default' do
       gzip
       hostname
       iproute2
+      libtool
       openssh
       rpm-build
       rsync
@@ -124,6 +128,7 @@ control 'default' do
     'gem --version',
     'git --version',
     'java -version',
+    'libtoolize --version',
     'make --version',
     'patch --version',
     'pkg-config --version',

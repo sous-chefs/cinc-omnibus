@@ -15,6 +15,7 @@ module CincOmnibus
             glibc-locale-source
             iproute
             libffi-devel
+            libtool
             ncurses-devel
             openssh-clients
             perl-IPC-Cmd
@@ -36,6 +37,7 @@ module CincOmnibus
             ca-certificates
             iproute
             libffi-devel
+            libtool
             openssh-clients
             perl-IPC-Cmd
             rpm-build
@@ -65,6 +67,7 @@ module CincOmnibus
             libffi-dev
             libncurses-dev
             libssl-dev
+            libtool
             locales
             locales-all
             openssh-client
@@ -87,6 +90,7 @@ module CincOmnibus
             hostname
             iproute2
             libffi-devel
+            libtool
             ncurses-devel
             openssh
             rpm-build

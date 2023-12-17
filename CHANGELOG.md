@@ -4,6 +4,8 @@ This file is used to list changes made in each version of the cinc-omnibus cookb
 
 ## Unreleased
 
+- Install libtool needed for workstation builds
+
 ## 1.1.12 - *2023-12-08*
 
 - Only install perl-FindBin perl-lib on newer AmazonLinux releases
