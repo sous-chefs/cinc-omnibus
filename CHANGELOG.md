@@ -2,6 +2,8 @@
 
 This file is used to list changes made in each version of the cinc-omnibus cookbook.
 
+## Unreleased
+
 ## 1.1.13 - *2023-12-17*
 
 - Install libtool needed for workstation builds
