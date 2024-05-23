@@ -4,6 +4,11 @@ This file is used to list changes made in each version of the cinc-omnibus cookb
 
 ## Unreleased
 
+- Manually update to standardized files
+- Remove testing for EOL platforms (but keep support for now)
+- Add support for Ubuntu 24.04
+- MDL fixes
+
 ## 1.1.15 - *2024-05-02*
 
 ## 1.1.14 - *2023-12-21*
@@ -62,12 +67,12 @@ This file is used to list changes made in each version of the cinc-omnibus cookb
 
 - Add support for ppc64le on Debian & Ubuntu
 - Add support for:
-  - AlmaLinux 8 & 9
-  - Amazon Linux 2023
-  - Debian 12
+   - AlmaLinux 8 & 9
+   - Amazon Linux 2023
+   - Debian 12
 - Remove support for:
-  - Amazon Linux 2 & 2022
-  - Debian 9
+   - Amazon Linux 2 & 2022
+   - Debian 9
 - Set sane default for Windows System Drive
 - Update and improved unit and integration tests
 

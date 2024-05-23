@@ -130,7 +130,7 @@ module CincOmnibus
           when '20.04'
             'openjdk-17-jdk-headless'
           else
-            'openjdk-18-jdk-headless'
+            'openjdk-21-jdk-headless'
           end
         when 'opensuseleap'
           'java-11-openjdk-devel'
