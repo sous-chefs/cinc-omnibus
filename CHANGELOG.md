@@ -4,6 +4,10 @@ This file is used to list changes made in each version of the cinc-omnibus cookb
 
 ## Unreleased
 
+- Add missing perl-Digest-SHA and perl-bignum needed for newer OpenSSL builds on EL-based platforms
+- Remove EOL CentOS Stream 8
+- Add Rocky Linux 8/9 to CI testing
+
 ## 1.1.16 - *2024-05-23*
 
 - Manually update to standardized files
