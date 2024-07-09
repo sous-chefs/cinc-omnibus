@@ -18,7 +18,9 @@ module CincOmnibus
             libtool
             ncurses-devel
             openssh-clients
+            perl-Digest-SHA
             perl-IPC-Cmd
+            perl-bignum
             rpm-build
             rpm-sign
             rsync
@@ -39,7 +41,9 @@ module CincOmnibus
             libffi-devel
             libtool
             openssh-clients
+            perl-Digest-SHA
             perl-IPC-Cmd
+            perl-bignum
             rpm-build
             rpm-sign
             rsync

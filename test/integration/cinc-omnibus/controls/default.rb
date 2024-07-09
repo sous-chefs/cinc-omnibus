@@ -12,14 +12,16 @@ control 'default' do
       iproute
       libtool
       openssh-clients
+      perl-Digest-SHA
       perl-IPC-Cmd
+      perl-bignum
       rsync
       tar
       tzdata
       wget
     )
     packages << %w(perl-FindBin perl-lib) if os_version.to_i >= 2022
-  when 'centos', 'redhat', 'almalinux'
+  when 'centos', 'redhat', 'almalinux', 'rocky'
     packages = %w(
       automake
       bzip2
@@ -28,7 +30,9 @@ control 'default' do
       libffi-devel
       libtool
       openssh-clients
+      perl-Digest-SHA
       perl-IPC-Cmd
+      perl-bignum
       rpm-build
       rpm-sign
       rsync
