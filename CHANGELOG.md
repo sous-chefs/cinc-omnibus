@@ -4,6 +4,8 @@ This file is used to list changes made in each version of the cinc-omnibus cookb
 
 ## Unreleased
 
+- Add EL9 s390x Cinc omnibus-toolchain package
+
 ## 1.1.17 - *2024-07-09*
 
 - Add missing perl-Digest-SHA and perl-bignum needed for newer OpenSSL builds on EL-based platforms
