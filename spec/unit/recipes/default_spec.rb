@@ -133,4 +133,20 @@ describe 'cinc-omnibus::default' do
       )
     end
   end
+
+  context 'almalinux 9 - s390x' do
+    platform 'almalinux', '9'
+    automatic_attributes['kernel']['machine'] = 's390x'
+
+    it do
+      is_expected.to upgrade_chef_ingredient('omnibus-toolchain').with(
+        rubygems_url: 'https://packagecloud.io/cinc-project/stable',
+        version: 'latest',
+        channel: :stable,
+        architecture: 's390x',
+        platform: nil,
+        platform_version_compatibility_mode: true
+      )
+    end
+  end
 end

@@ -195,7 +195,7 @@ module CincOmnibus
       end
 
       def cinc_omnibus?
-        if ppc64le? && el? && node['platform_version'].to_i == 9
+        if (ppc64le? || s390x?) && el? && node['platform_version'].to_i == 9
           true
         elsif ppc64le? && debian?
           true
