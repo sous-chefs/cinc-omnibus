@@ -2,6 +2,8 @@
 
 This file is used to list changes made in each version of the cinc-omnibus cookbook.
 
+## Unreleased
+
 ## 1.1.19 - *2024-07-31*
 
 - Add basic support for riscv64
