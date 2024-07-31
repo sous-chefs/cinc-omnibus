@@ -41,7 +41,7 @@ describe 'cinc-omnibus::default' do
       it { expect { chef_run }.to_not raise_error }
       it do
         is_expected.to upgrade_chef_ingredient('omnibus-toolchain').with(
-          rubygems_url: 'https://packagecloud.io/cinc-project/stable',
+          rubygems_url: 'https://rubygems.cinc.sh',
           version: 'latest',
           channel: :stable,
           architecture: 'ppc64le',
@@ -91,7 +91,7 @@ describe 'cinc-omnibus::default' do
     it { expect { chef_run }.to_not raise_error }
     it do
       is_expected.to upgrade_chef_ingredient('omnibus-toolchain').with(
-        rubygems_url: 'https://packagecloud.io/cinc-project/stable',
+        rubygems_url: 'https://rubygems.cinc.sh',
         version: 'latest',
         channel: :stable,
         architecture: 'ppc64le',
@@ -124,7 +124,7 @@ describe 'cinc-omnibus::default' do
 
     it do
       is_expected.to upgrade_chef_ingredient('omnibus-toolchain').with(
-        rubygems_url: 'https://packagecloud.io/cinc-project/stable',
+        rubygems_url: 'https://rubygems.cinc.sh',
         version: 'latest',
         channel: :stable,
         architecture: 'ppc64le',
@@ -140,7 +140,7 @@ describe 'cinc-omnibus::default' do
 
     it do
       is_expected.to upgrade_chef_ingredient('omnibus-toolchain').with(
-        rubygems_url: 'https://packagecloud.io/cinc-project/stable',
+        rubygems_url: 'https://rubygems.cinc.sh',
         version: 'latest',
         channel: :stable,
         architecture: 's390x',

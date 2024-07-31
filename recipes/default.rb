@@ -27,7 +27,7 @@ end if omnibus_unsafe_deps
 
 chef_ingredient 'omnibus-toolchain' do
   # Chef doesn't have some platforms on ppc64le yet
-  rubygems_url 'https://packagecloud.io/cinc-project/stable' if cinc_omnibus?
+  rubygems_url 'https://rubygems.cinc.sh' if cinc_omnibus?
   version 'latest'
   channel :stable
   architecture node['kernel']['machine']
