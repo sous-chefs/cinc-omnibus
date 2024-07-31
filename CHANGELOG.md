@@ -4,6 +4,8 @@ This file is used to list changes made in each version of the cinc-omnibus cookb
 
 ## Unreleased
 
+- Add basic support for riscv64
+
 ## 1.1.18 - *2024-07-10*
 
 - Add EL9 s390x Cinc omnibus-toolchain package

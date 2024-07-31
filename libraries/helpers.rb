@@ -202,7 +202,7 @@ module CincOmnibus
         elsif ppc64le? && ubuntu?
           true
         else
-          false
+          node['kernel']['machine'] == 'riscv64'
         end
       end
     end
