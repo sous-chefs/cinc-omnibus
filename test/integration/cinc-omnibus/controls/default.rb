@@ -39,11 +39,12 @@ control 'default' do
       tar
       tzdata
       wget
-      zlib-devel
     )
     packages << %w(centos-release-scl devtoolset-10) if os_version.to_i == 7
     packages << %w(glibc-langpack-en glibc-locale-source) if os_version.to_i >= 8
     packages << %w(perl-FindBin perl-lib) if os_version.to_i >= 9
+    packages << %w(zlib-devel) if os_version.to_i < 10
+    packages << %w(zlib-ng-compat-devel) if os_version.to_i >= 10
   when 'debian', 'ubuntu'
     packages = %w(
       automake

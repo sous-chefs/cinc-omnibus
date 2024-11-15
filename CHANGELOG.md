@@ -4,6 +4,8 @@ This file is used to list changes made in each version of the cinc-omnibus cookb
 
 ## Unreleased
 
+- Add support for RHEL-10
+
 ## 1.1.20 - *2024-07-31*
 
 - Update rubygems_url to new Cinc rubygems server
