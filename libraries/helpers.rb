@@ -119,6 +119,8 @@ module CincOmnibus
             'java-11-openjdk-devel'
           when 8, 9
             'java-17-openjdk-devel'
+          when 10
+            'java-21-openjdk-devel'
           end
         when 'debian'
           case node['platform_version'].to_i
