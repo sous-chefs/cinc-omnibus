@@ -2,6 +2,8 @@
 
 This file is used to list changes made in each version of the cinc-omnibus cookbook.
 
+## Unreleased
+
 ## 1.2.0 - *2024-11-15*
 
 - Add support for RHEL-10
