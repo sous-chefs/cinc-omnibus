@@ -4,6 +4,8 @@ This file is used to list changes made in each version of the cinc-omnibus cookb
 
 ## Unreleased
 
+- Use cinc omnibus-toolchain for RHEL-10
+
 ## 1.2.0 - *2024-11-15*
 
 - Add support for RHEL-10
