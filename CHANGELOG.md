@@ -2,6 +2,8 @@
 
 This file is used to list changes made in each version of the cinc-omnibus cookbook.
 
+## Unreleased
+
 ## 1.2.2 - *2025-01-06*
 
 - Remove pkg-config-lite from omnibus-toolchain binary path
