@@ -12,6 +12,7 @@ control 'default' do
       iproute
       libtool
       openssh-clients
+      pkgconf
       perl-Digest-SHA
       perl-IPC-Cmd
       perl-bignum
@@ -30,6 +31,7 @@ control 'default' do
       libffi-devel
       libtool
       openssh-clients
+      pkgconf
       perl-Digest-SHA
       perl-IPC-Cmd
       perl-bignum
@@ -62,6 +64,7 @@ control 'default' do
       locales
       locales-all
       openssh-client
+      pkgconf
       rsync
       tar
       tzdata
@@ -84,6 +87,7 @@ control 'default' do
       iproute2
       libtool
       openssh
+      pkgconf
       rpm-build
       rsync
       tar
@@ -113,6 +117,10 @@ control 'default' do
 
   describe package 'omnibus-toolchain' do
     it { should be_installed }
+  end
+
+  describe file '/opt/omnibus-toolchain/bin/pkg-config' do
+    it { should_not exist }
   end
 
   describe command '/opt/omnibus-toolchain/bin/ruby --version' do
