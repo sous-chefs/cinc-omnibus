@@ -36,6 +36,14 @@ chef_ingredient 'omnibus-toolchain' do
   action(windows? ? :install : :upgrade)
 end
 
+# TODO: Remove installed pkg-config-lite from omnibus-toolchain to prefer distro version
+omnibus_pkgconfig_files.each do |f|
+  file f do
+    manage_symlink_source true
+    action :delete
+  end
+end
+
 group 'omnibus' do
   append true
 end

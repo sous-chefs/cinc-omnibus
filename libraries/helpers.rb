@@ -18,6 +18,7 @@ module CincOmnibus
             libtool
             ncurses-devel
             openssh-clients
+            pkgconf
             perl-Digest-SHA
             perl-IPC-Cmd
             perl-bignum
@@ -41,6 +42,7 @@ module CincOmnibus
             libffi-devel
             libtool
             openssh-clients
+            pkgconf
             perl-Digest-SHA
             perl-IPC-Cmd
             perl-bignum
@@ -75,6 +77,7 @@ module CincOmnibus
             locales
             locales-all
             openssh-client
+            pkgconf
             rsync
             tar
             tzdata
@@ -97,6 +100,7 @@ module CincOmnibus
             libtool
             ncurses-devel
             openssh
+            pkgconf
             rpm-build
             rsync
             tar
@@ -150,6 +154,15 @@ module CincOmnibus
         when 'debian'
           %w(libpcre2-dev libselinux1-dev)
         end
+      end
+
+      def omnibus_pkgconfig_files
+        %w(
+          /opt/omnibus-toolchain/bin/pkg-config
+          /opt/omnibus-toolchain/embedded/bin/pkg-config
+          /opt/omnibus-toolchain/LICENSES/pkg-config-lite-COPYING
+          /opt/omnibus-toolchain/embedded/share/aclocal/pkg.m4
+        )
       end
 
       def omnibus_env
