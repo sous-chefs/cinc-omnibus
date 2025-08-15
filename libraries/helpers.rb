@@ -130,8 +130,10 @@ module CincOmnibus
           case node['platform_version'].to_i
           when 10, 11
             'openjdk-11-jdk-headless'
-          else
+          when 12
             'openjdk-17-jdk-headless'
+          else
+            'openjdk-21-jdk-headless'
           end
         when 'ubuntu'
           case node['platform_version']
