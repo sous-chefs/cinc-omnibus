@@ -2,6 +2,13 @@
 
 This file is used to list changes made in each version of the cinc-omnibus cookbook.
 
+## [1.2.5](https://github.com/sous-chefs/cinc-omnibus/compare/1.2.4...v1.2.5) (2025-10-15)
+
+
+### Bug Fixes
+
+* **ci:** Update workflows to use release pipeline ([#40](https://github.com/sous-chefs/cinc-omnibus/issues/40)) ([07d7cc0](https://github.com/sous-chefs/cinc-omnibus/commit/07d7cc0158705a147f01819df504d9100e032e86))
+
 ## 1.2.4 - *2025-08-18*
 
 ## 1.2.3 - *2025-08-16*
