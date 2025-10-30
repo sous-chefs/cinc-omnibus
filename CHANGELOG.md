@@ -2,6 +2,13 @@
 
 This file is used to list changes made in each version of the cinc-omnibus cookbook.
 
+## [1.2.6](https://github.com/sous-chefs/cinc-omnibus/compare/v1.2.5...v1.2.6) (2025-10-30)
+
+### Bug Fixes
+
+* Add perl-Time-Piece package ([#44](https://github.com/sous-chefs/cinc-omnibus/issues/44)) ([b214ef1](https://github.com/sous-chefs/cinc-omnibus/commit/b214ef1f685ddb7a72c3e7a9a85fc286562fc7cb))
+* **ci:** Update workflows to use release pipeline ([#40](https://github.com/sous-chefs/cinc-omnibus/issues/40)) ([07d7cc0](https://github.com/sous-chefs/cinc-omnibus/commit/07d7cc0158705a147f01819df504d9100e032e86))
+
 ## [1.2.5](https://github.com/sous-chefs/cinc-omnibus/compare/1.2.4...v1.2.5) (2025-10-15)
 
 ### Bug Fixes
