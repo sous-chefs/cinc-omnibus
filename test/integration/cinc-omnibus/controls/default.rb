@@ -1,4 +1,5 @@
 os_version = os.release
+os_name = os.name
 path = '/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin'
 
 control 'default' do
@@ -15,6 +16,7 @@ control 'default' do
       pkgconf
       perl-Digest-SHA
       perl-IPC-Cmd
+      perl-Time-Piece
       perl-bignum
       rsync
       tar
@@ -34,6 +36,7 @@ control 'default' do
       pkgconf
       perl-Digest-SHA
       perl-IPC-Cmd
+      perl-Time-Piece
       perl-bignum
       rpm-build
       rpm-sign
@@ -129,7 +132,11 @@ control 'default' do
 
   describe command '/home/omnibus/load-omnibus-toolchain.sh' do
     its('exit_status') { should eq 0 }
-    its('stderr') { should eq '' }
+    # TODO: There's an issue with the upstream omnibus-software package
+    # bash: /opt/omnibus-toolchain/embedded/lib/libtinfo.so.6: no version information available (required by bash)
+    unless os_name == 'ubuntu'
+      its('stderr') { should eq '' }
+    end
   end
 
   [

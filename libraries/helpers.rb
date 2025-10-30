@@ -21,6 +21,7 @@ module CincOmnibus
             pkgconf
             perl-Digest-SHA
             perl-IPC-Cmd
+            perl-Time-Piece
             perl-bignum
             rpm-build
             rpm-sign
@@ -45,6 +46,7 @@ module CincOmnibus
             pkgconf
             perl-Digest-SHA
             perl-IPC-Cmd
+            perl-Time-Piece
             perl-bignum
             rpm-build
             rpm-sign
