@@ -11,6 +11,7 @@ module CincOmnibus
             automake
             bzip2
             ca-certificates
+            git
             glibc-langpack-en
             glibc-locale-source
             iproute
@@ -39,6 +40,7 @@ module CincOmnibus
             automake
             bzip2
             ca-certificates
+            git
             iproute
             libffi-devel
             libtool
@@ -68,6 +70,7 @@ module CincOmnibus
             bzip2
             ca-certificates
             devscripts
+            git
             dpkg-dev
             fakeroot
             gnupg
@@ -93,6 +96,7 @@ module CincOmnibus
             automake
             bzip2
             curl
+            git
             glibc-i18ndata
             glibc-locale
             gzip

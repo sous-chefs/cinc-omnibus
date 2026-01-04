@@ -25,6 +25,9 @@ package omnibus_unsafe_deps do
   action :remove
 end if omnibus_unsafe_deps
 
+# Ensure the latest mixlib-install gem is available for EL10 support
+node.override['chef-ingredient']['mixlib-install']['version'] = '3.12.30'
+
 chef_ingredient 'omnibus-toolchain' do
   # Chef doesn't have some platforms on ppc64le yet
   rubygems_url 'https://rubygems.cinc.sh' if cinc_omnibus?

@@ -8,6 +8,7 @@ control 'default' do
     packages = %w(
       automake
       ca-certificates
+      git
       glibc-langpack-en
       glibc-locale-source
       iproute
@@ -29,6 +30,7 @@ control 'default' do
       automake
       bzip2
       ca-certificates
+      git
       iproute
       libffi-devel
       libtool
@@ -59,6 +61,7 @@ control 'default' do
       devscripts
       dpkg-dev
       fakeroot
+      git
       gnupg
       iproute2
       libffi-dev
@@ -83,6 +86,7 @@ control 'default' do
     packages = %w(
       automake
       curl
+      git
       glibc-i18ndata
       glibc-locale
       gzip
