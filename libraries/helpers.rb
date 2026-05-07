@@ -1,8 +1,8 @@
+# frozen_string_literal: true
+
 module CincOmnibus
   module Cookbook
     module Helpers
-      require 'mixlib/shellout'
-
       def omnibus_packages
         pkgs = []
         case node['platform_family']
@@ -35,7 +35,7 @@ module CincOmnibus
           pkgs << %w(perl-FindBin perl-lib) if node['platform_version'].to_i >= 2022
           pkgs.append(omnibus_java_pkg)
           pkgs.flatten.sort
-        when 'rhel'
+        when 'rhel', 'fedora'
           pkgs = %w(
             automake
             bzip2
@@ -61,6 +61,10 @@ module CincOmnibus
           pkgs << %w(centos-release-scl) if node['platform_version'].to_i == 7
           pkgs << %w(glibc-langpack-en glibc-locale-source) if node['platform_version'].to_i >= 8
           pkgs << %w(perl-FindBin perl-lib) if node['platform_version'].to_i >= 9
+          pkgs.delete('zlib-devel') if node['platform_version'].to_i >= 10
+          pkgs << 'zlib-ng-compat-devel' if node['platform_version'].to_i >= 10
+          pkgs.delete('wget') if node['platform'] == 'fedora'
+          pkgs << 'wget2-wget' if node['platform'] == 'fedora'
           pkgs.append(omnibus_java_pkg)
           pkgs.flatten.sort
         when 'debian'
@@ -123,7 +127,7 @@ module CincOmnibus
         case node['platform']
         when 'amazon'
           'java-17-amazon-corretto-headless'
-        when 'centos', 'redhat', 'almalinux', 'rocky'
+        when 'centos', 'centos_stream', 'redhat', 'almalinux', 'rocky', 'oracle'
           case node['platform_version'].to_i
           when 7
             'java-11-openjdk-devel'
@@ -132,6 +136,8 @@ module CincOmnibus
           when 10
             'java-21-openjdk-devel'
           end
+        when 'fedora'
+          'java-latest-openjdk-devel'
         when 'debian'
           case node['platform_version'].to_i
           when 10, 11
@@ -177,7 +183,7 @@ module CincOmnibus
         node.run_state[:omnibus_env] ||= Hash.new { |hash, key| hash[key] = [] }
       end
 
-      def toolchain_install_dir
+      def default_toolchain_install_dir
         if windows?
           windows_safe_path_join(windows_system_drive, 'opscode', 'omnibus-toolchain')
         else
@@ -195,7 +201,7 @@ module CincOmnibus
         end
       end
 
-      def build_user_home
+      def default_build_user_home
         if mac_os_x?
           '/Users/omnibus'
         elsif windows?
@@ -209,11 +215,11 @@ module CincOmnibus
         ENV['SYSTEMDRIVE'] || 'C:'
       end
 
-      def build_user_shell
+      def default_build_user_shell
         if windows?
-          windows_safe_path_join(toolchain_install_dir, 'embedded', 'bin', 'usr', 'bin', 'bash')
+          windows_safe_path_join(default_toolchain_install_dir, 'embedded', 'bin', 'usr', 'bin', 'bash')
         else
-          ::File.join(toolchain_install_dir, 'bin', 'bash')
+          ::File.join(default_toolchain_install_dir, 'bin', 'bash')
         end
       end
 
@@ -233,5 +239,3 @@ module CincOmnibus
     end
   end
 end
-Chef::DSL::Recipe.include ::CincOmnibus::Cookbook::Helpers
-Chef::Resource.include ::CincOmnibus::Cookbook::Helpers

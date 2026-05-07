@@ -1,6 +1,9 @@
+# frozen_string_literal: true
+
 os_version = os.release
 os_name = os.name
 path = '/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin'
+toolchain_managed = false
 
 control 'default' do
   case os.name
@@ -25,7 +28,7 @@ control 'default' do
       wget
     )
     packages << %w(perl-FindBin perl-lib) if os_version.to_i >= 2022
-  when 'centos', 'redhat', 'almalinux', 'rocky'
+  when 'centos', 'redhat', 'almalinux', 'rocky', 'oracle', 'fedora'
     packages = %w(
       automake
       bzip2
@@ -52,6 +55,17 @@ control 'default' do
     packages << %w(perl-FindBin perl-lib) if os_version.to_i >= 9
     packages << %w(zlib-devel) if os_version.to_i < 10
     packages << %w(zlib-ng-compat-devel) if os_version.to_i >= 10
+    packages.delete('wget') if os_name == 'fedora'
+    packages << %w(wget2-wget) if os_name == 'fedora'
+    packages << if os_name == 'fedora'
+                  %w(java-latest-openjdk-devel)
+                elsif os_version.to_i == 7
+                  %w(java-11-openjdk-devel)
+                elsif os_version.to_i >= 10
+                  %w(java-21-openjdk-devel)
+                else
+                  %w(java-17-openjdk-devel)
+                end
   when 'debian', 'ubuntu'
     packages = %w(
       automake
@@ -81,6 +95,13 @@ control 'default' do
                   %w(libncurses5-dev)
                 else
                   %w(libncurses-dev)
+                end
+    packages << if os_version.to_i == 10 || os_version.to_i == 11 || os_version == '18.04'
+                  %w(openjdk-11-jdk-headless)
+                elsif os_version.to_i == 12 || os_version == '20.04'
+                  %w(openjdk-17-jdk-headless)
+                else
+                  %w(openjdk-21-jdk-headless)
                 end
   when 'opensuse'
     packages = %w(
@@ -122,45 +143,53 @@ control 'default' do
     end
   end
 
-  describe package 'omnibus-toolchain' do
-    it { should be_installed }
-  end
-
-  describe file '/opt/omnibus-toolchain/bin/pkg-config' do
-    it { should_not exist }
-  end
-
-  describe command '/opt/omnibus-toolchain/bin/ruby --version' do
-    its('exit_status') { should eq 0 }
-  end
-
-  describe command '/home/omnibus/load-omnibus-toolchain.sh' do
-    its('exit_status') { should eq 0 }
-    # TODO: There's an issue with the upstream omnibus-software package
-    # bash: /opt/omnibus-toolchain/embedded/lib/libtinfo.so.6: no version information available (required by bash)
-    unless os_name == 'ubuntu'
-      its('stderr') { should eq '' }
+  if toolchain_managed
+    describe package 'omnibus-toolchain' do
+      it { should be_installed }
     end
-  end
 
-  [
-    'bash --version',
-    'berks --version',
-    'bundle --version',
-    'curl --version',
-    'gcc --version',
-    'gem --version',
-    'git --version',
-    'java -version',
-    'libtoolize --version',
-    'make --version',
-    'patch --version',
-    'pkg-config --version',
-    'ruby --version',
-    'tar --version',
-  ].each do |cmd|
-    describe command "PATH='/opt/omnibus-toolchain/bin:/usr/local/bin:#{path}' #{cmd}" do
+    describe file '/opt/omnibus-toolchain/bin/pkg-config' do
+      it { should_not exist }
+    end
+
+    describe command '/opt/omnibus-toolchain/bin/ruby --version' do
       its('exit_status') { should eq 0 }
+    end
+
+    describe command '/home/omnibus/load-omnibus-toolchain.sh' do
+      its('exit_status') { should eq 0 }
+      unless os_name == 'ubuntu'
+        its('stderr') { should eq '' }
+      end
+    end
+
+    [
+      'bash --version',
+      'berks --version',
+      'bundle --version',
+      'curl --version',
+      'gcc --version',
+      'gem --version',
+      'git --version',
+      'java -version',
+      'libtoolize --version',
+      'make --version',
+      'patch --version',
+      'pkg-config --version',
+      'ruby --version',
+      'tar --version',
+    ].each do |cmd|
+      describe command "PATH='/opt/omnibus-toolchain/bin:/usr/local/bin:#{path}' #{cmd}" do
+        its('exit_status') { should eq 0 }
+      end
+    end
+  else
+    describe package 'omnibus-toolchain' do
+      it { should_not be_installed }
+    end
+
+    describe file '/home/omnibus/load-omnibus-toolchain.sh' do
+      it { should exist }
     end
   end
 end
