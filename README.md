@@ -15,20 +15,20 @@ This major release removes `recipe[cinc-omnibus::default]`. Use the `cinc_omnibu
 
 ## Requirements
 
-- Chef 16 or higher
+* Chef 16 or higher
 
 ## Platform
 
-- AlmaLinux 8+
-- Amazon Linux 2023
-- CentOS Stream 9+
-- Debian 12+
-- Fedora
-- Oracle Linux 8+
-- Red Hat Enterprise Linux 8+
-- Rocky Linux 8+
-- SUSE Linux Enterprise
-- Ubuntu 22.04+
+* AlmaLinux 8+
+* Amazon Linux 2023
+* CentOS Stream 9+
+* Debian 12+
+* Fedora
+* Oracle Linux 8+
+* Red Hat Enterprise Linux 8+
+* Rocky Linux 8+
+* SUSE Linux Enterprise
+* Ubuntu 22.04+
 
 Current Kitchen verification in this migration branch covers AlmaLinux 8, AlmaLinux 9, AlmaLinux 10, Amazon Linux 2023, CentOS Stream 9, CentOS Stream 10, Debian 12, Debian 13, Fedora latest, Oracle Linux 8, Oracle Linux 9, Rocky Linux 8, Rocky Linux 9, Rocky Linux 10, Ubuntu 22.04, and Ubuntu 24.04.
 
@@ -36,7 +36,7 @@ Current Kitchen verification in this migration branch covers AlmaLinux 8, AlmaLi
 
 Resource documentation:
 
-- [cinc_omnibus_builder](documentation/cinc_omnibus_builder.md)
+* [cinc_omnibus_builder](documentation/cinc_omnibus_builder.md)
 
 ### `cinc_omnibus_builder`
 
