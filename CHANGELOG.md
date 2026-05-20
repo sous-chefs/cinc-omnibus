@@ -2,6 +2,17 @@
 
 This file is used to list changes made in each version of the cinc-omnibus cookbook.
 
+## [2.0.0](https://github.com/sous-chefs/cinc-omnibus/compare/v1.3.0...v2.0.0) (2026-05-20)
+
+
+### ⚠ BREAKING CHANGES
+
+* migrate cinc-omnibus to custom resources ([#56](https://github.com/sous-chefs/cinc-omnibus/issues/56))
+
+### Features
+
+* migrate cinc-omnibus to custom resources ([#56](https://github.com/sous-chefs/cinc-omnibus/issues/56)) ([9e03795](https://github.com/sous-chefs/cinc-omnibus/commit/9e037959d26bb66698392859578d39b5d7fe7dc5))
+
 ## [1.3.0](https://github.com/sous-chefs/cinc-omnibus/compare/v1.2.6...v1.3.0) (2026-01-04)
 
 ### Features
