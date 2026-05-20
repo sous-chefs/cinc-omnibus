@@ -4,7 +4,6 @@ This file is used to list changes made in each version of the cinc-omnibus cookb
 
 ## [1.3.0](https://github.com/sous-chefs/cinc-omnibus/compare/v1.2.6...v1.3.0) (2026-01-04)
 
-
 ### Features
 
 * add git package to all platforms ([#50](https://github.com/sous-chefs/cinc-omnibus/issues/50)) ([38f3217](https://github.com/sous-chefs/cinc-omnibus/commit/38f32178a35d7aacbe02ca095beaedd47b49a86b))

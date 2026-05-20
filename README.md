@@ -11,18 +11,42 @@
 The Cinc Omnibus cookbook provides the tools to build various Cinc projects. This cookbook was originally modeled after
 the omnibus cookbook.
 
+This major release removes `recipe[cinc-omnibus::default]`. Use the `cinc_omnibus_builder` resource instead. See [migration.md](migration.md) before upgrading from a recipe-based release.
+
 ## Requirements
 
 - Chef 16 or higher
 
 ## Platform
 
-- Amazon Linux 2+
-- CentOS 7
-- CentOS Stream 8+
-- Debian 9+
-- OpenSUSE Leap 15+
-- Ubuntu 18.04+
+- AlmaLinux 8+
+- Amazon Linux 2023
+- CentOS Stream 9+
+- Debian 12+
+- Fedora
+- Oracle Linux 8+
+- Red Hat Enterprise Linux 8+
+- Rocky Linux 8+
+- SUSE Linux Enterprise
+- Ubuntu 22.04+
+
+Current Kitchen verification in this migration branch covers AlmaLinux 8, AlmaLinux 9, AlmaLinux 10, Amazon Linux 2023, CentOS Stream 9, CentOS Stream 10, Debian 12, Debian 13, Fedora latest, Oracle Linux 8, Oracle Linux 9, Rocky Linux 8, Rocky Linux 9, Rocky Linux 10, Ubuntu 22.04, and Ubuntu 24.04.
+
+## Resources
+
+Resource documentation:
+
+- [cinc_omnibus_builder](documentation/cinc_omnibus_builder.md)
+
+### `cinc_omnibus_builder`
+
+Configures a build host for Cinc Omnibus projects.
+
+```ruby
+cinc_omnibus_builder 'default'
+```
+
+The resource installs platform build dependencies, installs `omnibus-toolchain`, creates the `omnibus` user and cache directory, writes a Git configuration, and writes `load-omnibus-toolchain.sh`.
 
 ## Maintainers
 
