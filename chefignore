@@ -57,6 +57,7 @@ mkmf.log
 .watchr
 .yamllint
 azure-pipelines.yml
+bootstrap/*
 Dangerfile
 examples/*
 features/*

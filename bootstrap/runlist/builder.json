@@ -1,0 +1,5 @@
+{
+  "run_list": [
+    "recipe[cinc-omnibus-bootstrap::default]"
+  ]
+}

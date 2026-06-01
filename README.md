@@ -1,6 +1,6 @@
 # cinc-omnibus Cookbook
 
-[![Cookbook Version](https://img.shields.io/cookbook/v/selnux.svg)](https://supermarket.chef.io/cookbooks/cinc-omnibus)
+[![Cookbook Version](https://img.shields.io/cookbook/v/cinc-omnibus.svg)](https://supermarket.chef.io/cookbooks/cinc-omnibus)
 [![CI State](https://github.com/sous-chefs/cinc-omnibus/workflows/ci/badge.svg)](https://github.com/sous-chefs/cinc-omnibus/actions?query=workflow%3Aci)
 [![OpenCollective](https://opencollective.com/sous-chefs/backers/badge.svg)](#backers)
 [![OpenCollective](https://opencollective.com/sous-chefs/sponsors/badge.svg)](#sponsors)
@@ -11,7 +11,7 @@
 The Cinc Omnibus cookbook provides the tools to build various Cinc projects. This cookbook was originally modeled after
 the omnibus cookbook.
 
-This major release removes `recipe[cinc-omnibus::default]`. Use the `cinc_omnibus_builder` resource instead. See [migration.md](migration.md) before upgrading from a recipe-based release.
+The toolchain package is sourced unconditionally from the Cinc Project's mirror (`omnitruck.cinc.sh`) on every supported platform — the previous Chef Progress fallback has been removed.
 
 ## Requirements
 
@@ -24,13 +24,16 @@ This major release removes `recipe[cinc-omnibus::default]`. Use the `cinc_omnibu
 * CentOS Stream 9+
 * Debian 12+
 * Fedora
+* FreeBSD 13+
+* macOS 14+
 * Oracle Linux 8+
 * Red Hat Enterprise Linux 8+
 * Rocky Linux 8+
 * SUSE Linux Enterprise
-* Ubuntu 22.04+
+* Ubuntu 20.04+
+* Windows Server 2016+
 
-Current Kitchen verification in this migration branch covers AlmaLinux 8, AlmaLinux 9, AlmaLinux 10, Amazon Linux 2023, CentOS Stream 9, CentOS Stream 10, Debian 12, Debian 13, Fedora latest, Oracle Linux 8, Oracle Linux 9, Rocky Linux 8, Rocky Linux 9, Rocky Linux 10, Ubuntu 22.04, and Ubuntu 24.04.
+Current Kitchen verification covers AlmaLinux 8/9/10, Amazon Linux 2023, CentOS Stream 9/10, Debian 12/13, Fedora latest, openSUSE Leap 15, Oracle Linux 8/9, Rocky Linux 8/9/10, and Ubuntu 20.04/22.04/24.04/26.04. macOS, FreeBSD, and Windows are exercised via `kitchen.exec.yml` against real builder hosts.
 
 ## Resources
 
@@ -46,7 +49,11 @@ Configures a build host for Cinc Omnibus projects.
 cinc_omnibus_builder 'default'
 ```
 
-The resource installs platform build dependencies, installs `omnibus-toolchain`, creates the `omnibus` user and cache directory, writes a Git configuration, and writes `load-omnibus-toolchain.sh`.
+The resource installs platform build dependencies, installs the Cinc-built `omnibus-toolchain`, creates the `omnibus` user (Unix-likes) and cache directory, writes a Git configuration, and writes the toolchain load shim (`load-omnibus-toolchain.sh` on Unix, `load-omnibus-toolchain.ps1` on Windows).
+
+## Bootstrap
+
+A standalone bootstrap is available under [`bootstrap/`](bootstrap/) for setting up a fresh node as a Cinc Omnibus build host without a Chef Server. See [bootstrap/README.md](bootstrap/README.md) for usage. See [migration.md](migration.md) when upgrading between major versions.
 
 ## Maintainers
 
