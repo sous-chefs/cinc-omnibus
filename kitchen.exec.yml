@@ -3,5 +3,6 @@ driver: { name: exec }
 transport: { name: exec }
 
 platforms:
+  - name: freebsd-latest
   - name: macos-latest
   - name: windows-latest

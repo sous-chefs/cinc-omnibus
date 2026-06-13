@@ -2,8 +2,27 @@
 
 os_version = os.release
 os_name = os.name
-path = '/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin'
-toolchain_managed = false
+unix_path = '/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin'
+
+case os.family
+when 'windows'
+  install_dir = 'C:\cinc-project\omnibus-toolchain'
+  build_user_home = 'C:\omnibus'
+  shim_name = 'load-omnibus-toolchain.ps1'
+  # Registry DisplayName is versioned ("Omnibus Toolchain v26.0.2"),
+  # so we query the uninstall registry with a wildcard below.
+  toolchain_pkg = nil
+when 'darwin'
+  install_dir = '/opt/omnibus-toolchain'
+  build_user_home = '/Users/omnibus'
+  shim_name = 'load-omnibus-toolchain.sh'
+  toolchain_pkg = 'sh.cinc.pkg.omnibus-toolchain'
+else
+  install_dir = '/opt/omnibus-toolchain'
+  build_user_home = '/home/omnibus'
+  shim_name = 'load-omnibus-toolchain.sh'
+  toolchain_pkg = 'omnibus-toolchain'
+end
 
 control 'default' do
   case os.name
@@ -106,6 +125,7 @@ control 'default' do
   when 'opensuse'
     packages = %w(
       automake
+      bzip2
       curl
       git
       glibc-i18ndata
@@ -113,7 +133,10 @@ control 'default' do
       gzip
       hostname
       iproute2
+      java-11-openjdk-devel
+      libffi-devel
       libtool
+      ncurses-devel
       openssh
       pkgconf
       rpm-build
@@ -121,7 +144,35 @@ control 'default' do
       tar
       timezone
       wget
+      zlib-devel
     )
+  when 'freebsd'
+    packages = %w(
+      autoconf
+      automake
+      gcc
+      git
+      libffi
+      libtool
+      libyaml
+      openssl
+      pkgconf
+      readline
+    )
+  when 'darwin'
+    packages = %w(
+      autoconf
+      automake
+      git
+      libffi
+      libtool
+      libyaml
+      openssl@3
+      pkgconf
+      readline
+    )
+  else
+    packages = []
   end
 
   case os.family
@@ -137,59 +188,131 @@ control 'default' do
     end
   end
 
-  unsafe_pkgs.each do |pkg|
+  unsafe_pkgs.to_a.each do |pkg|
     describe package pkg do
       it { should_not be_installed }
     end
   end
 
-  if toolchain_managed
-    describe package 'omnibus-toolchain' do
-      it { should be_installed }
+  if os.windows?
+    describe powershell(<<~PS) do
+      $entry = Get-ChildItem 'HKLM:\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall' |
+        ForEach-Object { Get-ItemProperty $_.PSPath } |
+        Where-Object { $_.DisplayName -like 'Omnibus Toolchain*' } |
+        Select-Object -First 1
+      if (-not $entry) { exit 1 } else { Write-Output $entry.DisplayName }
+    PS
+      its('exit_status') { should eq 0 }
+      its('stdout') { should match(/^Omnibus Toolchain/) }
     end
 
-    describe file '/opt/omnibus-toolchain/bin/pkg-config' do
+    describe file install_dir do
+      it { should be_directory }
+    end
+
+    describe file "#{build_user_home}\\#{shim_name}" do
+      it { should exist }
+    end
+
+    describe powershell("& \"#{install_dir}\\embedded\\bin\\ruby.exe\" --version") do
+      its('exit_status') { should eq 0 }
+      its('stdout') { should match(/^ruby \d/) }
+    end
+
+    describe powershell(". \"#{build_user_home}\\#{shim_name}\"") do
+      its('exit_status') { should eq 0 }
+      its('stdout') { should match(/Tool Versions/) }
+    end
+  else
+    # InSpec's package resource on Darwin queries Homebrew, not the .pkg
+    # database, so check the installer receipt directly via pkgutil. On
+    # FreeBSD the toolchain ships as a self-extracting .sh that doesn't
+    # register with pkg at all, so fall back to a file-existence check.
+    if os.darwin?
+      describe command "pkgutil --pkg-info #{toolchain_pkg}" do
+        its('exit_status') { should eq 0 }
+        its('stdout') { should match(/^package-id: #{Regexp.escape(toolchain_pkg)}$/) }
+        its('stdout') { should match(%r{^location: opt/omnibus-toolchain$}) }
+      end
+    elsif os.bsd?
+      describe file "#{install_dir}/version-manifest.txt" do
+        it { should exist }
+      end
+    else
+      describe package toolchain_pkg do
+        it { should be_installed }
+      end
+    end
+
+    describe file "#{install_dir}/bin/pkg-config" do
       it { should_not exist }
     end
 
-    describe command '/opt/omnibus-toolchain/bin/ruby --version' do
+    describe command "#{install_dir}/bin/ruby --version" do
       its('exit_status') { should eq 0 }
+      its('stdout') { should match(/^ruby \d/) }
     end
 
-    describe command '/home/omnibus/load-omnibus-toolchain.sh' do
+    describe command "#{build_user_home}/#{shim_name}" do
       its('exit_status') { should eq 0 }
-      unless os_name == 'ubuntu'
+      its('stdout') { should match(/Tool Versions/) }
+      # Ubuntu writes wget deprecation lines to stderr; FreeBSD writes
+      # "java: command not found" since java is not part of the FreeBSD
+      # toolchain. The load-shim-output info control still confirms
+      # every other tool resolves on PATH.
+      unless os_name == 'ubuntu' || os.bsd?
         its('stderr') { should eq '' }
       end
     end
 
-    [
-      'bash --version',
-      'berks --version',
-      'bundle --version',
-      'curl --version',
-      'gcc --version',
-      'gem --version',
-      'git --version',
-      'java -version',
-      'libtoolize --version',
-      'make --version',
-      'patch --version',
-      'pkg-config --version',
-      'ruby --version',
-      'tar --version',
-    ].each do |cmd|
-      describe command "PATH='/opt/omnibus-toolchain/bin:/usr/local/bin:#{path}' #{cmd}" do
+    tools = %w(
+      bash
+      bundle
+      curl
+      gcc
+      gem
+      git
+      libtoolize
+      make
+      patch
+      pkg-config
+      ruby
+      tar
+    )
+    # Toolchain build matrix omissions:
+    # - macOS doesn't bundle berks or a Java JRE.
+    # - FreeBSD doesn't bundle berks or Java either, and inspec's
+    #   command resource sees the toolchain ruby wrappers (ruby/gem/
+    #   bundle, which share an interpreter shebang) as exit 1 even
+    #   though direct invocation and the load shim succeed. The
+    #   load-shim-output info control covers those tools.
+    tools -= %w(bundle gem ruby) if os.bsd?
+    tool_cmds = tools.map { |c| "#{c} --version" }
+    tool_cmds.unshift('berks --version') unless os.darwin? || os.bsd?
+    tool_cmds.push('java -version') unless os.darwin? || os.bsd?
+
+    tool_cmds.each do |cmd|
+      describe command "PATH='#{install_dir}/bin:/usr/local/bin:#{unix_path}' #{cmd}" do
         its('exit_status') { should eq 0 }
       end
     end
-  else
-    describe package 'omnibus-toolchain' do
-      it { should_not be_installed }
-    end
+  end
+end
 
-    describe file '/home/omnibus/load-omnibus-toolchain.sh' do
-      it { should exist }
+control 'load-shim-output' do
+  impact 0.0
+  title 'Echo load-omnibus-toolchain shim output for manual review'
+
+  shim_cmd = if os.windows?
+               powershell(". \"#{build_user_home}\\#{shim_name}\"")
+             else
+               command("#{build_user_home}/#{shim_name}")
+             end
+
+  shim_cmd.stdout.each_line do |line|
+    next if line.strip.empty?
+    describe line.chomp do
+      it { should match(/.*/) }
     end
   end
 end

@@ -120,6 +120,32 @@ module CincOmnibus
           )
           pkgs.append(omnibus_java_pkg)
           pkgs.flatten.sort
+        when 'mac_os_x'
+          %w(
+            autoconf
+            automake
+            git
+            libffi
+            libtool
+            libyaml
+            openssl@3
+            pkgconf
+            readline
+          )
+        when 'freebsd'
+          %w(
+            autoconf
+            automake
+            bash
+            gcc
+            git
+            libffi
+            libtool
+            libyaml
+            openssl
+            pkgconf
+            readline
+          )
         end
       end
 
@@ -170,13 +196,13 @@ module CincOmnibus
         end
       end
 
-      def omnibus_pkgconfig_files
-        %w(
-          /opt/omnibus-toolchain/bin/pkg-config
-          /opt/omnibus-toolchain/embedded/bin/pkg-config
-          /opt/omnibus-toolchain/LICENSES/pkg-config-lite-COPYING
-          /opt/omnibus-toolchain/embedded/share/aclocal/pkg.m4
-        )
+      def omnibus_pkgconfig_files(install_dir = default_toolchain_install_dir)
+        [
+          ::File.join(install_dir, 'bin', 'pkg-config'),
+          ::File.join(install_dir, 'embedded', 'bin', 'pkg-config'),
+          ::File.join(install_dir, 'LICENSES', 'pkg-config-lite-COPYING'),
+          ::File.join(install_dir, 'embedded', 'share', 'aclocal', 'pkg.m4'),
+        ]
       end
 
       def omnibus_env
@@ -185,7 +211,7 @@ module CincOmnibus
 
       def default_toolchain_install_dir
         if windows?
-          windows_safe_path_join(windows_system_drive, 'opscode', 'omnibus-toolchain')
+          windows_safe_path_join(windows_system_drive, 'cinc-project', 'omnibus-toolchain')
         else
           '/opt/omnibus-toolchain'
         end
@@ -223,17 +249,11 @@ module CincOmnibus
         end
       end
 
-      def cinc_omnibus?
-        if (ppc64le? || s390x?) && el? && node['platform_version'].to_i == 9
-          true
-        elsif el? && node['platform_version'].to_i >= 10
-          true
-        elsif ppc64le? && debian?
-          true
-        elsif ppc64le? && ubuntu?
-          true
+      def default_cache_dir
+        if windows?
+          windows_safe_path_join(windows_system_drive, 'omnibus', 'cache')
         else
-          node['kernel']['machine'] == 'riscv64'
+          '/var/cache/omnibus'
         end
       end
     end

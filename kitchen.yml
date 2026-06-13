@@ -31,13 +31,20 @@ platforms:
   - name: debian-12
   - name: debian-13
   - name: fedora-latest
+  - name: opensuse-leap-15
   - name: oraclelinux-8
   - name: oraclelinux-9
   - name: rockylinux-8
   - name: rockylinux-9
   - name: rockylinux-10
+  - name: ubuntu-20.04
   - name: ubuntu-22.04
   - name: ubuntu-24.04
+  - name: ubuntu-26.04
+  - name: freebsd-14
+  - name: windows-2022
+    driver:
+      box: stromweld/windows-2022
 
 suites:
   - name: default

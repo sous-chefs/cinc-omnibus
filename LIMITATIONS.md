@@ -1,68 +1,56 @@
 # Limitations
 
-## Package Availability
+## Package Source
 
 The `cinc_omnibus_builder` resource configures build hosts for Cinc Omnibus projects. It installs
 distribution build packages, removes known unsafe package conflicts, and installs the
 `omnibus-toolchain` package through `chef_ingredient`.
 
-### Cinc packages
+The toolchain package is fetched unconditionally from the Cinc Project's mirror
+(`omnitruck.cinc.sh`) via the Cinc-patched `mixlib-install` gem (sourced from
+`https://rubygems.cinc.sh`). The previous Chef Progress (`packages.chef.io`) fallback was removed
+when Chef wound down its omnibus pipeline.
 
-Cinc publishes install scripts and plain packages for Cinc Client, Auditor, Server, and Workstation.
-The Cinc download page states that packages are available on the Cinc download site, while standard
-package-manager repositories such as APT and Yum are not currently provided.
+## Platform Support
 
-### Chef/Cinc platform baseline
+Supported platforms and architectures track the build matrix of the upstream Cinc
+[`omnibus-toolchain`](https://gitlab.com/cinc-project/distribution/omnibus-toolchain) project
+(see its `CINC_MAINTENANCE_PLAN.md` §2.3 for the source of truth).
 
-This cookbook uses Chef/Cinc omnibus packages through `chef_ingredient`, so its realistic platform
-support follows the Chef Infra Client and Chef Workstation platform families that still receive
-current packages.
+### Kitchen coverage
 
-Current non-EOL Kitchen coverage in this migration branch includes:
+| Suite | Driver | Platforms |
+| --- | --- | --- |
+| `kitchen.dokken.yml` | docker/dokken | AlmaLinux 8/9/10, Amazon Linux 2023, CentOS Stream 9/10, Debian 12/13, Fedora latest, openSUSE Leap 15, Oracle Linux 8/9, Rocky Linux 8/9/10, Ubuntu 20.04/22.04/24.04/26.04 |
+| `kitchen.yml` | vagrant | All of the above plus FreeBSD 14 and Windows Server 2022 for local end-to-end verification |
+| `kitchen.exec.yml` | exec (runner) | `macos-latest` and `windows-latest` (GHA-driven); `freebsd-latest` for self-hosted runs |
 
-* AlmaLinux 8, 9, and 10
-* Amazon Linux 2023
-* CentOS Stream 9 and 10
-* Debian 12 and 13
-* Fedora latest
-* Oracle Linux 8 and 9
-* Rocky Linux 8, 9, and 10
-* Ubuntu 22.04 and 24.04
+Cross-architecture coverage (aarch64, ppc64le, s390x, riscv64) is exercised by the toolchain
+project's CI; the cookbook's Kitchen suites stay x86_64-only.
 
-SUSE Linux Enterprise support remains declared through the `suse` platform helper path, but there is
-no public Dokken SLES image in the local matrix. The old openSUSE Leap 15 Kitchen target was removed
-because Leap 15.6 reached EOL on April 30, 2026.
+## Build dependencies installed
 
-## Architecture Limitations
+| Platform Family | Source |
+| --- | --- |
+| Debian / Ubuntu | Distribution packages + `omnibus-toolchain` |
+| RHEL family / Amazon / Fedora | Distribution packages + `omnibus-toolchain` |
+| SUSE | Distribution packages + `omnibus-toolchain` |
+| macOS | Homebrew formulae + `omnibus-toolchain` `.pkg` |
+| FreeBSD | `pkg` packages + `omnibus-toolchain` self-extracting `.sh` |
+| Windows | `omnibus-toolchain` `.msi` (build deps live in the runner image) |
 
-The resource preserves the legacy Cinc rubygems fallback for platforms where upstream Chef packages
-do not publish some architectures:
+On macOS the cookbook also creates compatibility symlinks in `/usr/local/bin` so that the
+canonical autotools names resolve against Homebrew's renamed binaries: `libtoolize` →
+`glibtoolize` always, and on Apple Silicon also `pkg-config` → Homebrew's `pkg-config` shim
+(which lives outside `/usr/local/bin` when Homebrew is in `/opt/homebrew`).
 
-* Enterprise Linux 9 on `ppc64le` and `s390x`
-* Enterprise Linux 10 and newer
-* Debian and Ubuntu on `ppc64le`
-* `riscv64`
-
-The `omnibus-toolchain` package was not available from Chef's package endpoint for the Linux
-package paths checked during this migration, including local `arm64` paths and GitHub Actions
-`x86_64` EL paths. The test cookbook disables toolchain installation while keeping the resource
-default as `manage_toolchain true`; ChefSpec verifies the default `chef_ingredient` declaration.
-
-## Source/Compiled Installation
+## Source / Compiled Installation
 
 This cookbook prepares a build host; it does not compile Cinc or Omnibus projects itself.
 
-### Build Dependencies
-
-| Platform Family | Package Source |
-| --- | --- |
-| Debian/Ubuntu | Distribution packages plus `omnibus-toolchain` |
-| RHEL family/Amazon/Fedora | Distribution packages plus `omnibus-toolchain` |
-| SUSE | Distribution packages plus `omnibus-toolchain` |
-
 ## Known Issues
 
-* A single-node Kitchen suite verifies host preparation and the toolchain script, but it does not
-  build a full Cinc artifact.
-* The resource still writes `/usr/local/share/ruby-docker-copy-patch.rb` to preserve the previous
-  Docker copy-file patch behavior.
+* The integration test verifies host preparation, toolchain install, and the load shim; it does
+  not build a full Cinc artifact.
+* The resource writes `/usr/local/share/ruby-docker-copy-patch.rb` on Linux to preserve the
+  copy-file syscall workaround for Linux kernels 5.6–5.10 (no-op on macOS/FreeBSD/Windows).
