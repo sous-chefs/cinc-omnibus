@@ -2,6 +2,17 @@
 
 This file is used to list changes made in each version of the cinc-omnibus cookbook.
 
+## [3.0.0](https://github.com/sous-chefs/cinc-omnibus/compare/v2.0.0...v3.0.0) (2026-06-13)
+
+
+### ⚠ BREAKING CHANGES
+
+* source omnibus-toolchain from the Cinc fork on all platforms ([#60](https://github.com/sous-chefs/cinc-omnibus/issues/60))
+
+### Features
+
+* source omnibus-toolchain from the Cinc fork on all platforms ([#60](https://github.com/sous-chefs/cinc-omnibus/issues/60)) ([4a796d4](https://github.com/sous-chefs/cinc-omnibus/commit/4a796d4c1b04064973dee0555809197f24b2293a))
+
 ## [2.0.0](https://github.com/sous-chefs/cinc-omnibus/compare/v1.3.0...v2.0.0) (2026-05-20)
 
 ### ⚠ BREAKING CHANGES
