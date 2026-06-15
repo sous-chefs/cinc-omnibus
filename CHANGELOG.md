@@ -2,6 +2,13 @@
 
 This file is used to list changes made in each version of the cinc-omnibus cookbook.
 
+## [4.0.2](https://github.com/sous-chefs/cinc-omnibus/compare/v4.0.1...v4.0.2) (2026-06-15)
+
+
+### Bug Fixes
+
+* use sous-chefs workflows 8.0.4 ([#70](https://github.com/sous-chefs/cinc-omnibus/issues/70)) ([a4f5189](https://github.com/sous-chefs/cinc-omnibus/commit/a4f5189d86ac48b1fcae297a6052a4668702a594))
+
 ## [4.0.1](https://github.com/sous-chefs/cinc-omnibus/compare/v4.0.0...v4.0.1) (2026-06-15)
 
 ### Bug Fixes
