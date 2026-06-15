@@ -2,6 +2,10 @@
 
 $ErrorActionPreference = 'Stop'
 
+# PowerShell 5.1 / older .NET may omit TLS 1.2, which our download hosts
+# require; -bor adds it without clobbering newer protocols.
+[Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12
+
 $RepoBranch = if ($env:REPO_BRANCH) { $env:REPO_BRANCH } else { 'main' }
 $ChefIngredientBranch = if ($env:CHEF_INGREDIENT_BRANCH) { $env:CHEF_INGREDIENT_BRANCH } else { 'main' }
 
@@ -20,7 +24,7 @@ Invoke-WebRequest -UseBasicParsing `
   -Uri "https://github.com/sous-chefs/cinc-omnibus/archive/refs/heads/$RepoBranch.zip" `
   -OutFile "$Work\cinc-omnibus.zip"
 Invoke-WebRequest -UseBasicParsing `
-  -Uri "https://github.com/sous-chefs/chef-ingredient/archive/refs/heads/$ChefIngredientBranch.zip" `
+  -Uri "https://github.com/chef-cookbooks/chef-ingredient/archive/refs/heads/$ChefIngredientBranch.zip" `
   -OutFile "$Work\chef-ingredient.zip"
 
 Expand-Archive -Path "$Work\cinc-omnibus.zip" -DestinationPath $Work -Force
@@ -41,9 +45,8 @@ Copy-Item "$Work\cookbooks\cinc-omnibus\bootstrap\runlist\builder.json" "$Work\d
   --json-attributes "$Work\dna.json" `
   --chef-zero-port 8889
 
-# Uninstall cinc-client via the MSI's recorded UninstallString and wipe
-# the scratch dir. The toolchain itself was installed by the converge
-# above and lives at C:\cinc-project\omnibus-toolchain — untouched here.
+# Uninstall cinc-client via its MSI and wipe the scratch dir; the toolchain
+# at C:\cinc-project\omnibus-toolchain is left untouched.
 $cinc = Get-ChildItem 'HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall' |
   ForEach-Object { Get-ItemProperty $_.PSPath } |
   Where-Object { $_.DisplayName -like 'Cinc Client*' } |

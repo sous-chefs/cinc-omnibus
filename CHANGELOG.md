@@ -4,7 +4,6 @@ This file is used to list changes made in each version of the cinc-omnibus cookb
 
 ## [3.0.0](https://github.com/sous-chefs/cinc-omnibus/compare/v2.0.0...v3.0.0) (2026-06-13)
 
-
 ### ⚠ BREAKING CHANGES
 
 * source omnibus-toolchain from the Cinc fork on all platforms ([#60](https://github.com/sous-chefs/cinc-omnibus/issues/60))

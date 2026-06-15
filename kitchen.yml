@@ -3,7 +3,7 @@ driver:
   name: vagrant
 
 provisioner:
-  name: chef_infra
+  name: cinc_infra
   multiple_converge: 2
   enforce_idempotency: true
   deprecations_as_errors: true
@@ -45,6 +45,13 @@ platforms:
   - name: windows-2022
     driver:
       box: stromweld/windows-2022
+      cpus: 4
+      memory: 4096
+    # The chocolatey resource is not idempotent (upstream issue), so converge
+    # once and skip the idempotency check on Windows only.
+    provisioner:
+      multiple_converge: 1
+      enforce_idempotency: false
 
 suites:
   - name: default

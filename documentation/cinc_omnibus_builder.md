@@ -34,6 +34,12 @@ The toolchain package is sourced from the Cinc Project's package mirror via the 
 | `manage_debian_arm_links` | true, false | `true` | Whether to create Debian ARM compatibility links on Debian versions older than 12. |
 | `extra_environment` | Hash | `{}` | Additional environment variables for the toolchain load shim (`load-omnibus-toolchain.sh` on Unix, `load-omnibus-toolchain.ps1` on Windows). Values may be strings or arrays. |
 | `remove_packages` | true, false | `false` | Whether `:remove` should remove configured packages. |
+| `manage_msys2` | true, false | `true` | Windows only. Whether to install and manage MSYS2 via the `cinc_omnibus_msys2` resource. |
+| `msys2_packages` | Array | UCRT64 build deps mirroring the Linux set | Pacman packages/groups passed to `cinc_omnibus_msys2`. |
+| `msys2_ignore_packages` | Array | gcc/gcc-libs/binutils | Packages frozen via pacman `IgnorePkg`, passed to `cinc_omnibus_msys2`. |
+| `msys2_pinned_packages` | Array | `[]` | Exact `.pkg.tar.zst` files/URLs to `pacman -U`, passed to `cinc_omnibus_msys2`. |
+| `msys2_base_archive_date` | String | newest on the mirror | Dated MSYS2 base archive to install (defaults to the newest on the mirror), passed to `cinc_omnibus_msys2`. |
+| `msys2_verify_signature` | true, false | `true` | Verify the MSYS2 base archive's GPG signature, passed to `cinc_omnibus_msys2`. |
 
 ## Platform notes
 
@@ -46,10 +52,18 @@ The toolchain package is sourced from the Cinc Project's package mirror via the 
   `/usr/local/bin/pkg-config` → Homebrew's `pkg-config`, since the Homebrew prefix
   (`/opt/homebrew`) isn't on the default omnibus PATH.
 * **FreeBSD:** installs `pkg` prerequisites and the `omnibus-toolchain` self-extracting `.sh`.
-* **Windows:** installs the `omnibus-toolchain` `.msi` to `C:\cinc-project\omnibus-toolchain`,
-  skips the omnibus user/group creation, and writes `load-omnibus-toolchain.ps1` instead of the
-  bash shim. PATH on Windows is *not* prepended by the shim — the runner's system PATH already
-  orders WiX / 7-Zip / MSYS2 / Ruby / Git correctly and prepending would shadow that ordering.
+* **Windows:** installs chocolatey and the build tools it manages (WiX, 7-Zip, the Windows SDK,
+  Git), installs the `omnibus-toolchain` `.msi` to `C:\cinc-project\omnibus-toolchain`, skips the
+  omnibus user/group creation, and writes `load-omnibus-toolchain.ps1` instead of the bash shim.
+  The shim prepends those tool directories (plus MSYS2 and the toolchain's `embedded\bin`) to
+  `$env:PATH` and sets `HOMEDRIVE`/`HOMEPATH` to the build user's home, so a freshly bootstrapped
+  box works without relying on a pre-baked system PATH.
+
+  **MSYS2 is managed by the [`cinc_omnibus_msys2`](cinc_omnibus_msys2.md) resource** (unless
+  `manage_msys2 false`). It installs MSYS2 at `C:\msys64`, provisions the ucrt64 build toolchain
+  via pacman, and freezes gcc/binutils with `IgnorePkg` so upgrades are deliberate. The shim adds
+  `C:\msys64\ucrt64\bin` and `C:\msys64\usr\bin` to PATH. Chocolatey is still used for the other
+  Windows build tools (WiX, 7-Zip, the Windows SDK, Git).
 
 ## Examples
 

@@ -9,8 +9,7 @@ when 'windows'
   install_dir = 'C:\cinc-project\omnibus-toolchain'
   build_user_home = 'C:\omnibus'
   shim_name = 'load-omnibus-toolchain.ps1'
-  # Registry DisplayName is versioned ("Omnibus Toolchain v26.0.2"),
-  # so we query the uninstall registry with a wildcard below.
+  # DisplayName is versioned, so query the uninstall registry with a wildcard.
   toolchain_pkg = nil
 when 'darwin'
   install_dir = '/opt/omnibus-toolchain'
@@ -224,10 +223,8 @@ control 'default' do
       its('stdout') { should match(/Tool Versions/) }
     end
   else
-    # InSpec's package resource on Darwin queries Homebrew, not the .pkg
-    # database, so check the installer receipt directly via pkgutil. On
-    # FreeBSD the toolchain ships as a self-extracting .sh that doesn't
-    # register with pkg at all, so fall back to a file-existence check.
+    # Darwin: InSpec's package resource queries Homebrew, so check the pkgutil
+    # receipt. FreeBSD: the toolchain is a self-extracting .sh, so check the file.
     if os.darwin?
       describe command "pkgutil --pkg-info #{toolchain_pkg}" do
         its('exit_status') { should eq 0 }
@@ -256,10 +253,8 @@ control 'default' do
     describe command "#{build_user_home}/#{shim_name}" do
       its('exit_status') { should eq 0 }
       its('stdout') { should match(/Tool Versions/) }
-      # Ubuntu writes wget deprecation lines to stderr; FreeBSD writes
-      # "java: command not found" since java is not part of the FreeBSD
-      # toolchain. The load-shim-output info control still confirms
-      # every other tool resolves on PATH.
+      # Ubuntu (wget stderr) and FreeBSD (no java) write noise here; the
+      # load-shim-output control still confirms every other tool on PATH.
       unless os_name == 'ubuntu' || os.bsd?
         its('stderr') { should eq '' }
       end
@@ -279,13 +274,9 @@ control 'default' do
       ruby
       tar
     )
-    # Toolchain build matrix omissions:
-    # - macOS doesn't bundle berks or a Java JRE.
-    # - FreeBSD doesn't bundle berks or Java either, and inspec's
-    #   command resource sees the toolchain ruby wrappers (ruby/gem/
-    #   bundle, which share an interpreter shebang) as exit 1 even
-    #   though direct invocation and the load shim succeed. The
-    #   load-shim-output info control covers those tools.
+    # Build matrix omissions: macOS/FreeBSD bundle neither berks nor Java, and
+    # on FreeBSD inspec sees the ruby wrappers as exit 1 (the load-shim-output
+    # control covers those).
     tools -= %w(bundle gem ruby) if os.bsd?
     tool_cmds = tools.map { |c| "#{c} --version" }
     tool_cmds.unshift('berks --version') unless os.darwin? || os.bsd?
