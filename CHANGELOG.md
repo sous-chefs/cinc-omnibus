@@ -4,7 +4,6 @@ This file is used to list changes made in each version of the cinc-omnibus cookb
 
 ## [4.0.0](https://github.com/sous-chefs/cinc-omnibus/compare/v3.0.0...v4.0.0) (2026-06-15)
 
-
 ### ⚠ BREAKING CHANGES
 
 * MSYS2 is now installed and managed by the cookbook (`manage_msys2`, default true) instead of being an external prerequisite, and the minimum supported Chef Infra Client is now 19.0 (was 16.0).
