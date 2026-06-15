@@ -40,6 +40,7 @@ Current Kitchen verification covers AlmaLinux 8/9/10, Amazon Linux 2023, CentOS 
 Resource documentation:
 
 * [cinc_omnibus_builder](documentation/cinc_omnibus_builder.md)
+* [cinc_omnibus_msys2](documentation/cinc_omnibus_msys2.md)
 
 ### `cinc_omnibus_builder`
 

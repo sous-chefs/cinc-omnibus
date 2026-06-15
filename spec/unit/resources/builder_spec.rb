@@ -5,6 +5,12 @@ require 'spec_helper'
 describe 'cinc_omnibus_builder' do
   step_into :cinc_omnibus_builder
 
+  # Windows scans the mirror for the base archive date; stub the HTTP GET.
+  before do
+    allow_any_instance_of(Chef::HTTP::Simple).to receive(:get)
+      .and_return('msys2-base-x86_64-20260611.sfx.exe')
+  end
+
   context 'on ubuntu' do
     platform 'ubuntu', '24.04'
 
@@ -81,9 +87,29 @@ describe 'cinc_omnibus_builder' do
       )
     end
 
+    it { is_expected.to install_chocolatey_installer('install') }
+    it { is_expected.to install_chocolatey_package('wixtoolset') }
+    it { is_expected.to install_chocolatey_package('7zip') }
+    it { is_expected.to install_chocolatey_package('git') }
+    it { is_expected.to install_chocolatey_package('windows-sdk-8.1') }
+    # MSYS2 is managed by cinc_omnibus_msys2 (needs pacman), not choco.
+    it { is_expected.to_not install_chocolatey_package('msys2') }
+    it { is_expected.to install_cinc_omnibus_msys2('default') }
+
     # File::ALT_SEPARATOR is nil on Linux (the chefspec host) so
     # windows_safe_path_join leaves forward slashes in place.
     it { is_expected.to create_file('C:/omnibus/load-omnibus-toolchain.ps1') }
+
+    it 'puts the build tools on PATH in the load shim' do
+      expect(chef_run).to render_file('C:/omnibus/load-omnibus-toolchain.ps1')
+        .with_content(%r{\$env:PATH="C:/Program Files \(x86\)/WiX Toolset v3\.14/bin;.*;\$env:PATH"})
+    end
+
+    it 'keeps MSYS2 on PATH even though it is not choco-managed' do
+      expect(chef_run).to render_file('C:/omnibus/load-omnibus-toolchain.ps1')
+        .with_content(%r{C:/msys64/ucrt64/bin})
+    end
+
     it { is_expected.to_not install_build_essential('cinc-omnibus') }
     it { is_expected.to_not create_group('omnibus') }
     it { is_expected.to_not create_user('omnibus') }

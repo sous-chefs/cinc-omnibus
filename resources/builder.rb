@@ -24,6 +24,12 @@ property :manage_ruby_docker_copy_patch, [true, false], default: true
 property :manage_debian_arm_links, [true, false], default: true
 property :extra_environment, Hash, default: {}
 property :remove_packages, [true, false], default: false
+property :manage_msys2, [true, false], default: true
+property :msys2_packages, Array, default: lazy { msys2_default_packages }
+property :msys2_ignore_packages, Array, default: lazy { msys2_default_ignore_packages }
+property :msys2_pinned_packages, Array, default: []
+property :msys2_base_archive_date, String, default: lazy { msys2_latest_base_archive_date }
+property :msys2_verify_signature, [true, false], default: true
 
 default_action :create
 
@@ -39,12 +45,15 @@ action_class do
     }
 
     if windows?
-      # PATH stays untouched on Windows; the runner's system PATH
-      # already orders WiX / 7-Zip / MSYS2 / Ruby / Git correctly.
-      env['MSYS2_INSTALL_DIR'] = [windows_safe_path_join(windows_system_drive, 'msys64')]
+      # A fresh box has no build tools on PATH, so the shim prepends them.
+      # HOMEDRIVE/HOMEPATH point Ruby/Git at the build user's home.
+      env['PATH'] = windows_path_entries(install_dir)
+      env['HOMEDRIVE'] = [windows_system_drive]
+      env['HOMEPATH'] = [new_resource.build_user_home.sub(/\A[A-Za-z]:/, '')]
+      env['MSYS2_INSTALL_DIR'] = [windows_msys2_install_dir]
       env['MSYSTEM'] = ['UCRT64']
       env['OMNIBUS_WINDOWS_ARCH'] = ['x64']
-      env['BASH_ENV'] = [windows_safe_path_join(windows_system_drive, 'msys64', 'etc', 'bash.bashrc')]
+      env['BASH_ENV'] = [windows_safe_path_join(windows_msys2_install_dir, 'etc', 'bash.bashrc')]
     else
       env['PATH'] = [::File.join(install_dir, 'bin'), '/usr/local/bin']
     end
@@ -108,6 +117,8 @@ action_class do
   end
 
   def load_omnibus_toolchain_ps1_content(env)
+    # Windows PATH separator is ';'; File::PATH_SEPARATOR is ':' on the ChefSpec host.
+    path = env.fetch('PATH').uniq.join(';')
     exports = env.reject { |key, _value| key == 'PATH' }
                  .map { |key, value| "$env:#{key}='#{value.first}'" }
                  .join("\n")
@@ -117,6 +128,7 @@ action_class do
       # Load the base Omnibus environment
       ###############################################################
       #{exports}
+      $env:PATH="#{path};$env:PATH"
 
       ###############################################################
       # Query tool versions
@@ -178,12 +190,8 @@ action_class do
 end
 
 action :create do
-  # Bootstrap the FreeBSD pkg catalog on a fresh box. Chef's
-  # freebsd_package provider relies on `pkg rquery`, which returns "No
-  # candidate version available" until the catalog has been fetched
-  # (`pkg install` would auto-bootstrap, but the candidate query never
-  # gets there). `creates` makes this idempotent: the catalog file is
-  # written by pkg as part of the fetch.
+  # Bootstrap the FreeBSD pkg catalog: freebsd_package's `pkg rquery` returns
+  # no candidate until the catalog is fetched. `creates` keeps it idempotent.
   execute 'pkg update' do
     command 'pkg update'
     only_if { freebsd? }
@@ -191,19 +199,31 @@ action :create do
   end
 
   if new_resource.packages
-    if freebsd?
-      # Chef's freebsd_pkgng provider has a multipackage bug: a single
-      # `pkg rquery` call with multiple names returns N lines of versions
-      # but candidate_version_array only carries the combined string at
-      # index 0, leaving the rest of the package_name array with no
-      # candidate. Install one at a time so each call gets its own
-      # candidate_version lookup.
+    if windows?
+      # Build tools via chocolatey; MSYS2 (needs pacman) is handled by
+      # cinc_omnibus_msys2 below.
+      chocolatey_installer 'install'
+
+      new_resource.packages.each { |p| chocolatey_package p }
+    elsif freebsd?
+      # Work around a freebsd_pkgng multipackage bug (only the first name gets
+      # a candidate version); install one at a time.
       new_resource.packages.each { |p| package p }
     else
       package new_resource.packages
     end
   end
   package 'devtoolset-10' if centos? && node['platform_version'].to_i == 7
+
+  if windows? && new_resource.manage_msys2
+    cinc_omnibus_msys2 new_resource.instance_name do
+      packages new_resource.msys2_packages
+      ignore_packages new_resource.msys2_ignore_packages
+      pinned_packages new_resource.msys2_pinned_packages
+      base_archive_date new_resource.msys2_base_archive_date
+      verify_signature new_resource.msys2_verify_signature
+    end
+  end
 
   build_essential 'cinc-omnibus' unless windows?
 
@@ -325,8 +345,8 @@ action :create do
   end
 
   if mac_os_x?
-    # Homebrew installs libtool's binary as glibtoolize and (on Apple
-    # Silicon) puts pkg-config outside the default omnibus build PATH.
+    # Homebrew names libtool's binary glibtoolize, and on Apple Silicon puts
+    # pkg-config outside the default omnibus PATH.
     brew_prefix = arm? ? '/opt/homebrew' : '/usr/local'
 
     link '/usr/local/bin/libtoolize' do
@@ -376,4 +396,10 @@ action :remove do
   package new_resource.packages do
     action :remove
   end if new_resource.remove_packages && new_resource.packages
+
+  if windows? && new_resource.manage_msys2 && new_resource.remove_packages
+    cinc_omnibus_msys2 new_resource.instance_name do
+      action :remove
+    end
+  end
 end

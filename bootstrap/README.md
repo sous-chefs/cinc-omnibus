@@ -38,8 +38,14 @@ all Linux distros ship bash).
 ### Windows (Server 2016+)
 
 ```powershell
+[Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12
 . { Invoke-WebRequest -UseBasicParsing -Uri https://raw.githubusercontent.com/sous-chefs/cinc-omnibus/main/bootstrap/install.ps1 } | Invoke-Expression
 ```
+
+> On Windows Server 2016 / Windows PowerShell 5.1, the `SecurityProtocol` line is required: the
+> default .NET protocols can omit TLS 1.2, which GitHub requires, and the download fails with
+> *"Could not create SSL/TLS secure channel."* The script sets TLS 1.2 internally for its own
+> subsequent calls, but this first fetch happens before the script runs.
 
 ## Environment overrides
 
@@ -49,7 +55,7 @@ a PR before merge):
 | Variable | Default | Purpose |
 | --- | --- | --- |
 | `REPO_BRANCH` | `main` | Branch/tag of `sous-chefs/cinc-omnibus` |
-| `CHEF_INGREDIENT_BRANCH` | `main` | Branch/tag of `sous-chefs/chef-ingredient` |
+| `CHEF_INGREDIENT_BRANCH` | `main` | Branch/tag of `chef-cookbooks/chef-ingredient` |
 
 Linux/macOS/FreeBSD:
 

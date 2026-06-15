@@ -146,6 +146,14 @@ module CincOmnibus
             pkgconf
             readline
           )
+        when 'windows'
+          # Via chocolatey_package; MSYS2 (needs pacman) goes through cinc_omnibus_msys2.
+          %w(
+            7zip
+            git
+            windows-sdk-8.1
+            wixtoolset
+          )
         end
       end
 
@@ -217,6 +225,129 @@ module CincOmnibus
         end
       end
 
+      def windows_msys2_install_dir
+        windows_safe_path_join(windows_system_drive, 'msys64')
+      end
+
+      # We source a dated archive (not "latest"): only dated mirror files carry
+      # a GPG .sig, and the base has no gcc so the date pins only the runtime.
+
+      # Fallback when the mirror listing can't be fetched/parsed.
+      def msys2_fallback_base_archive_date
+        '20260611'
+      end
+
+      # Newest dated base archive found by scanning the mirror listing.
+      def msys2_latest_base_archive_date
+        require 'chef/http/simple'
+        body = Chef::HTTP::Simple.new('https://repo.msys2.org').get('/distrib/x86_64/')
+        dates = body.scan(/msys2-base-x86_64-(\d{8})\.sfx\.exe/).flatten
+        dates.max || msys2_fallback_base_archive_date
+      rescue StandardError
+        msys2_fallback_base_archive_date
+      end
+
+      # The .sfx.exe self-extracts (it carries its own zstd decoder), avoiding
+      # the need for an external extractor; it also has a GPG .sig.
+      def msys2_default_base_archive_url(date = msys2_latest_base_archive_date)
+        "https://repo.msys2.org/distrib/x86_64/msys2-base-x86_64-#{date}.sfx.exe"
+      end
+
+      # MSYS2 maintainer (Christoph Reiter) who signs the base archives; key
+      # vendored at files/default/msys2-signing-key.asc. The sig is the only
+      # integrity check (no checksum is published).
+      def msys2_signing_key_fingerprint
+        '0EBF782C5D53F7E5FB02A66746BD761F7A49B0EC'
+      end
+
+      # UCRT64 build deps mirroring the Linux omnibus_packages set (autotools etc.
+      # come from base-devel + the toolchain group; openjdk omitted, server-only).
+      def msys2_default_packages
+        %w(
+          base-devel
+          bzip2
+          ca-certificates
+          git
+          gnupg
+          mingw-w64-ucrt-x86_64-libffi
+          mingw-w64-ucrt-x86_64-ncurses
+          mingw-w64-ucrt-x86_64-openssl
+          mingw-w64-ucrt-x86_64-toolchain
+          mingw-w64-ucrt-x86_64-zlib
+          openssh
+          rsync
+          wget
+        )
+      end
+
+      # Frozen via pacman.conf IgnorePkg so `pacman -Syu` can't bump the compiler.
+      def msys2_default_ignore_packages
+        %w(
+          mingw-w64-ucrt-x86_64-binutils
+          mingw-w64-ucrt-x86_64-gcc
+          mingw-w64-ucrt-x86_64-gcc-libs
+        )
+      end
+
+      # The msys2_* helpers below back the cinc_omnibus_msys2 provider; they
+      # reference new_resource, so they are only valid in action context.
+
+      def msys2_bash_exe
+        windows_safe_path_join(new_resource.install_dir, 'usr', 'bin', 'bash.exe')
+      end
+
+      def msys2_pacman_conf
+        windows_safe_path_join(new_resource.install_dir, 'etc', 'pacman.conf')
+      end
+
+      def msys2_gpg_home
+        ::File.join(Chef::Config[:file_cache_path], 'msys2-gpg')
+      end
+
+      def msys2_signing_key_path
+        ::File.join(Chef::Config[:file_cache_path], 'msys2-signing-key.asc')
+      end
+
+      # Git for Windows' gpg is MSYS-built, so paths go through to_msys_path.
+      def msys2_gpg_cmd(args)
+        %("#{new_resource.gpg_path}" --homedir "#{to_msys_path(msys2_gpg_home)}" --batch #{args})
+      end
+
+      # Extract into install_dir's parent (the sfx unpacks a "msys64" folder).
+      # Forward slashes: a trailing backslash in -o"C:\" escapes the closing quote.
+      def msys2_extract_parent
+        "#{new_resource.install_dir.tr('\\', '/').sub(%r{/[^/]*\z}, '')}/"
+      end
+
+      # Run a command in an MSYS2 login shell (-l sources the profile for PATH).
+      def msys2_shell(command)
+        %("#{msys2_bash_exe}" -lc '#{command}')
+      end
+
+      def msys2_ignore_pkg_line
+        "IgnorePkg   = #{new_resource.ignore_packages.join(' ')}"
+      end
+
+      # True while a gpg-agent/dirmngr daemon is still running.
+      def msys2_gpg_daemons_running?
+        shell_out('tasklist /nh').stdout.match?(/gpg-agent\.exe|dirmngr\.exe/i)
+      end
+
+      # PATH entries for the Windows load shim: tools the omnibus toolchain
+      # shells out to (WiX, 7-Zip, Windows SDK, Git, MSYS2) but doesn't add itself.
+      def windows_path_entries(install_dir = default_toolchain_install_dir)
+        drive = windows_system_drive
+        [
+          windows_safe_path_join(drive, 'Program Files (x86)', 'WiX Toolset v3.14', 'bin'),
+          windows_safe_path_join(drive, 'Program Files', '7-Zip'),
+          windows_safe_path_join(drive, 'Program Files (x86)', 'Windows Kits', '8.1', 'bin', 'x64'),
+          windows_safe_path_join(install_dir, 'embedded', 'bin'),
+          windows_safe_path_join(drive, 'Program Files', 'Git', 'cmd'),
+          windows_safe_path_join(windows_msys2_install_dir, 'ucrt64', 'bin'),
+          windows_safe_path_join(windows_msys2_install_dir, 'usr', 'bin'),
+        ]
+      end
+
       def windows_safe_path_join(*pieces)
         path = File.join(*pieces)
 
@@ -225,6 +356,12 @@ module CincOmnibus
         else
           path
         end
+      end
+
+      # MSYS POSIX form for Git for Windows' gpg (C:\foo -> /c/foo). Paths
+      # without a drive letter (e.g. the ChefSpec host) are left unchanged.
+      def to_msys_path(path)
+        path.tr('\\', '/').sub(/\A([A-Za-z]):/) { "/#{Regexp.last_match(1).downcase}" }
       end
 
       def default_build_user_home

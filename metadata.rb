@@ -4,7 +4,7 @@ maintainer_email  'help@sous-chefs.org'
 license           'Apache-2.0'
 description       'Provides the cinc_omnibus_builder resource for configuring Cinc Omnibus build hosts'
 version           '3.0.0'
-chef_version      '>= 16.0'
+chef_version      '>= 19.0'
 issues_url        'https://github.com/sous-chefs/cinc-omnibus/issues'
 source_url        'https://github.com/sous-chefs/cinc-omnibus'
 

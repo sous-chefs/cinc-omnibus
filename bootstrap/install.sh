@@ -12,8 +12,7 @@ elif [ -e /usr/bin/dnf ] ; then
 elif [ -e /usr/bin/yum ] ; then
   yum -y install curl unzip
 elif [ "$(uname -s)" = "FreeBSD" ] ; then
-  # bash is required because the omnitruck install.sh below pipes
-  # through bash. macOS ships with bash; FreeBSD does not.
+  # FreeBSD lacks bash, which the omnitruck install.sh below pipes through.
   pkg install -y curl unzip bash
 fi
 # macOS ships with curl + unzip + bash; no prereq install needed.
@@ -29,7 +28,7 @@ chmod -R 777 /tmp/cinc
 curl -L -o /tmp/cinc/cinc-omnibus.zip \
   "https://github.com/sous-chefs/cinc-omnibus/archive/refs/heads/${REPO_BRANCH}.zip"
 curl -L -o /tmp/cinc/chef-ingredient.zip \
-  "https://github.com/sous-chefs/chef-ingredient/archive/refs/heads/${CHEF_INGREDIENT_BRANCH}.zip"
+  "https://github.com/chef-cookbooks/chef-ingredient/archive/refs/heads/${CHEF_INGREDIENT_BRANCH}.zip"
 
 cd /tmp/cinc
 unzip -q cinc-omnibus.zip
@@ -59,7 +58,6 @@ elif [ -e /usr/bin/yum ] ; then
 elif [ "$(uname -s)" = "FreeBSD" ] ; then
   pkg delete -y cinc
 fi
-# On macOS the rm -rf below removes /opt/cinc directly; no package
-# manager bookkeeping to undo.
+# On macOS the rm -rf below removes /opt/cinc directly; nothing else to undo.
 
 rm -rf /tmp/cinc /opt/cinc
