@@ -67,6 +67,19 @@ describe 'cinc_omnibus_builder' do
         platform_version_compatibility_mode: true
       )
     end
+
+    it { is_expected.to install_package(%w(automake bzip2 curl git glibc-i18ndata glibc-locale gzip hostname iproute2 java-11-openjdk-devel libffi-devel libtool ncurses-devel openssh pkgconf rpm-build rsync tar timezone wget zlib-devel)) }
+  end
+
+  context 'on opensuse leap 16' do
+    platform 'opensuse', '16.0'
+
+    recipe do
+      cinc_omnibus_builder 'default'
+    end
+
+    it { expect { chef_run }.to_not raise_error }
+    it { is_expected.to install_package(%w(automake bzip2 curl git glibc-i18ndata glibc-locale gzip hostname iproute2 java-21-openjdk-devel libffi-devel libtool ncurses-devel openssh pkgconf rpm-build rsync tar timezone wget zlib-devel)) }
   end
 
   context 'on windows' do

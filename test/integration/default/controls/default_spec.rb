@@ -132,7 +132,6 @@ control 'default' do
       gzip
       hostname
       iproute2
-      java-11-openjdk-devel
       libffi-devel
       libtool
       ncurses-devel
@@ -145,6 +144,12 @@ control 'default' do
       wget
       zlib-devel
     )
+    # Leap 16.0 dropped the Java 11 packages; it ships OpenJDK 21.
+    packages << if os_version.to_i >= 16
+                  %w(java-21-openjdk-devel)
+                else
+                  %w(java-11-openjdk-devel)
+                end
   when 'freebsd'
     packages = %w(
       autoconf
