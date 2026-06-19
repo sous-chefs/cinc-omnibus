@@ -191,7 +191,8 @@ module CincOmnibus
             'openjdk-21-jdk-headless'
           end
         when 'opensuseleap'
-          'java-11-openjdk-devel'
+          # Leap 16.0 dropped the Java 11 packages; it ships OpenJDK 21.
+          node['platform_version'].to_i >= 16 ? 'java-21-openjdk-devel' : 'java-11-openjdk-devel'
         end
       end
 

@@ -33,7 +33,7 @@ The toolchain package is sourced unconditionally from the Cinc Project's mirror 
 * Ubuntu 20.04+
 * Windows Server 2016+
 
-Current Kitchen verification covers AlmaLinux 8/9/10, Amazon Linux 2023, CentOS Stream 9/10, Debian 12/13, Fedora latest, openSUSE Leap 15, Oracle Linux 8/9, Rocky Linux 8/9/10, and Ubuntu 20.04/22.04/24.04/26.04. macOS, FreeBSD, and Windows are exercised via `kitchen.exec.yml` against real builder hosts.
+Current Kitchen verification covers AlmaLinux 8/9/10, Amazon Linux 2023, CentOS Stream 9/10, Debian 12/13, Fedora latest, openSUSE Leap 15/16, Oracle Linux 8/9, Rocky Linux 8/9/10, and Ubuntu 20.04/22.04/24.04/26.04. macOS, FreeBSD, and Windows are exercised via `kitchen.exec.yml` against real builder hosts.
 
 ## Resources
 
