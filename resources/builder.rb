@@ -209,6 +209,15 @@ action :create do
       # Work around a freebsd_pkgng multipackage bug (only the first name gets
       # a candidate version); install one at a time.
       new_resource.packages.each { |p| package p }
+    elsif platform_family?('suse')
+      # openSUSE Leap images can ship a runtime lib (e.g. libncurses6) that is
+      # newer than the matching *-devel package available in the configured
+      # repos, which makes a plain install of e.g. ncurses-devel unsatisfiable.
+      # Allow zypper to downgrade the runtime lib to the version the -devel
+      # package pins to so the dependency can be resolved.
+      package new_resource.packages do
+        options '--allow-downgrade'
+      end
     else
       package new_resource.packages
     end

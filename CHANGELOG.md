@@ -4,7 +4,6 @@ This file is used to list changes made in each version of the cinc-omnibus cookb
 
 ## [4.0.3](https://github.com/sous-chefs/cinc-omnibus/compare/v4.0.2...v4.0.3) (2026-06-19)
 
-
 ### Bug Fixes
 
 * add support for openSUSE Leap 16.0 ([#72](https://github.com/sous-chefs/cinc-omnibus/issues/72)) ([30f4c3c](https://github.com/sous-chefs/cinc-omnibus/commit/30f4c3cfed8fc40d990c322a153821738e4a803b))
