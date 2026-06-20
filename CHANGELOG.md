@@ -2,6 +2,13 @@
 
 This file is used to list changes made in each version of the cinc-omnibus cookbook.
 
+## [4.0.4](https://github.com/sous-chefs/cinc-omnibus/compare/v4.0.3...v4.0.4) (2026-06-20)
+
+
+### Bug Fixes
+
+* allow zypper to downgrade runtime libs on openSUSE ([#74](https://github.com/sous-chefs/cinc-omnibus/issues/74)) ([004ff9c](https://github.com/sous-chefs/cinc-omnibus/commit/004ff9cbf865888700d58787abf080d08d605da8))
+
 ## [4.0.3](https://github.com/sous-chefs/cinc-omnibus/compare/v4.0.2...v4.0.3) (2026-06-19)
 
 ### Bug Fixes
