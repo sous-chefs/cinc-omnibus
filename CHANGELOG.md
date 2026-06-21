@@ -1,5 +1,8 @@
 # cinc-omnibus CHANGELOG
 
+<!-- markdownlint-disable-file MD012 -->
+<!-- release-please emits a double blank line after each version header. -->
+
 This file is used to list changes made in each version of the cinc-omnibus cookbook.
 
 ## [4.0.4](https://github.com/sous-chefs/cinc-omnibus/compare/v4.0.3...v4.0.4) (2026-06-20)

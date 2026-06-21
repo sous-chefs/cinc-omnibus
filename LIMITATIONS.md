@@ -44,6 +44,20 @@ canonical autotools names resolve against Homebrew's renamed binaries: `libtooli
 `glibtoolize` always, and on Apple Silicon also `pkg-config` → Homebrew's `pkg-config` shim
 (which lives outside `/usr/local/bin` when Homebrew is in `/opt/homebrew`).
 
+## GitLab Runner
+
+On non-Linux builders (macOS, FreeBSD, Windows) the cookbook installs and manages the GitLab Runner
+via [`cinc_omnibus_gitlab_runner`](documentation/cinc_omnibus_gitlab_runner.md) (`manage_gitlab_runner`,
+default true). It never runs `gitlab-runner register` — registration stays manual. On Linux it is a
+no-op, since Linux omnibus builds run in Docker and the runner lives on the Docker host.
+
+On macOS the runner's omnibus `.dmg` step drives Finder via AppleScript, which needs the TCC
+*Automation* permission. Because Homebrew's `gitlab-runner` is ad-hoc signed and its identity changes
+on every version upgrade, that grant is normally lost on each `brew upgrade`. The cookbook re-signs
+the binary with a fixed self-signed identity so the grant persists; this still requires a **single**
+manual "Allow" click the first time (there is no MDM-free way to avoid that one prompt). See the
+resource docs for the one-time bootstrap and how to validate the AppleEvents client on your hosts.
+
 ## Source / Compiled Installation
 
 This cookbook prepares a build host; it does not compile Cinc or Omnibus projects itself.

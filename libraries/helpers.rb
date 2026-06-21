@@ -394,6 +394,31 @@ module CincOmnibus
           '/var/cache/omnibus'
         end
       end
+
+      # macOS only. True when the build user already holds a SecureToken. We
+      # mirror this onto the user resource so Chef's mac_user provider sees no
+      # divergence and never tries to toggle the token (which would demand
+      # admin credentials we don't have). sysadminctl writes status to stderr;
+      # if it isn't available we assume no token.
+      def mac_build_user_secure_token?(user)
+        return false unless mac_os_x?
+
+        status = shell_out('sysadminctl', '-secureTokenStatus', user)
+        "#{status.stdout}#{status.stderr}".match?(/Secure token is ENABLED/)
+      rescue Errno::ENOENT
+        false
+      end
+
+      # Homebrew's prefix: /opt/homebrew on Apple Silicon, /usr/local on Intel.
+      def mac_brew_prefix
+        arm? ? '/opt/homebrew' : '/usr/local'
+      end
+
+      # The gitlab-runner binary installed by Homebrew (a symlink into the
+      # Cellar; codesign follows it to sign the real Mach-O).
+      def gitlab_runner_mac_binary(prefix = mac_brew_prefix)
+        ::File.join(prefix, 'bin', 'gitlab-runner')
+      end
     end
   end
 end
