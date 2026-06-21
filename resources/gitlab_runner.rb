@@ -91,10 +91,14 @@ action :create do
             echo 'keyUsage = critical,digitalSignature'
             echo 'extendedKeyUsage = critical,codeSigning'
           } > "$TMP/req.cnf"
-          openssl req -x509 -newkey rsa:2048 -sha256 -days 3650 -nodes \
+          # Use the system LibreSSL (/usr/bin/openssl), not whatever is on PATH:
+          # a Homebrew openssl@3 exports PKCS#12 with a SHA-256 MAC that macOS
+          # `security import` rejects ("MAC verification failed"). LibreSSL
+          # defaults to the SHA1-MAC/3DES form `security` reads natively.
+          /usr/bin/openssl req -x509 -newkey rsa:2048 -sha256 -days 3650 -nodes \
             -keyout "$TMP/key.pem" -out "$TMP/cert.pem" \
             -subj "/CN=$IDENTITY" -config "$TMP/req.cnf"
-          openssl pkcs12 -export -out "$TMP/id.p12" \
+          /usr/bin/openssl pkcs12 -export -out "$TMP/id.p12" \
             -inkey "$TMP/key.pem" -in "$TMP/cert.pem" -passout pass:"$KCPASS"
           # codesign is pointed at this keychain explicitly (--keychain), so it
           # need not be added to the user search list.
