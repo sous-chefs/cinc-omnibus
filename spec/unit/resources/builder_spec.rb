@@ -25,8 +25,8 @@ describe 'cinc_omnibus_builder' do
     it { is_expected.to upgrade_chef_ingredient('omnibus-toolchain') }
     it { is_expected.to create_group('omnibus') }
     it { is_expected.to create_user('omnibus') }
-    it { is_expected.to create_file('/home/omnibus/.gitconfig') }
-    it { is_expected.to create_file('/home/omnibus/load-omnibus-toolchain.sh') }
+    it { is_expected.to create_cookbook_file('/home/omnibus/.gitconfig') }
+    it { is_expected.to create_template('/home/omnibus/load-omnibus-toolchain.sh') }
     it { is_expected.to create_file('/usr/local/share/ruby-docker-copy-patch.rb') }
     # The runner lives on the Docker host on Linux, not the build node.
     it { is_expected.to_not create_cinc_omnibus_gitlab_runner('default') }
@@ -114,7 +114,7 @@ describe 'cinc_omnibus_builder' do
 
     # File::ALT_SEPARATOR is nil on Linux (the chefspec host) so
     # windows_safe_path_join leaves forward slashes in place.
-    it { is_expected.to create_file('C:/omnibus/load-omnibus-toolchain.ps1') }
+    it { is_expected.to create_template('C:/omnibus/load-omnibus-toolchain.ps1') }
 
     it 'puts the build tools on PATH in the load shim' do
       expect(chef_run).to render_file('C:/omnibus/load-omnibus-toolchain.ps1')
@@ -145,7 +145,7 @@ describe 'cinc_omnibus_builder' do
 
     it { expect { chef_run }.to_not raise_error }
     it { is_expected.to install_package(%w(autoconf automake git libffi libtool libyaml openssl@3 pkgconf readline)) }
-    it { is_expected.to create_file('/Users/omnibus/load-omnibus-toolchain.sh') }
+    it { is_expected.to create_template('/Users/omnibus/load-omnibus-toolchain.sh') }
     it { is_expected.to_not create_file('/usr/local/share/ruby-docker-copy-patch.rb') }
     it { is_expected.to create_link('/usr/local/bin/libtoolize').with(to: '/usr/local/bin/glibtoolize') }
     it { is_expected.to_not create_link('/usr/local/bin/pkg-config') }
@@ -196,7 +196,7 @@ describe 'cinc_omnibus_builder' do
     %w(autoconf automake gcc git libffi libtool libyaml openssl pkgconf readline).each do |pkg|
       it { is_expected.to install_package(pkg) }
     end
-    it { is_expected.to create_file('/home/omnibus/load-omnibus-toolchain.sh') }
+    it { is_expected.to create_template('/home/omnibus/load-omnibus-toolchain.sh') }
     it { is_expected.to_not create_file('/usr/local/share/ruby-docker-copy-patch.rb') }
     it { is_expected.to create_cinc_omnibus_gitlab_runner('default') }
   end

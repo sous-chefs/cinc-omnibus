@@ -60,7 +60,6 @@ module CincOmnibus
             wget
             zlib-devel
           )
-          pkgs << %w(centos-release-scl) if node['platform_version'].to_i == 7
           pkgs << %w(glibc-langpack-en glibc-locale-source) if node['platform_version'].to_i >= 8
           pkgs << %w(perl-FindBin perl-lib) if node['platform_version'].to_i >= 9
           pkgs.delete('zlib-devel') if node['platform_version'].to_i >= 10
@@ -165,8 +164,6 @@ module CincOmnibus
           'java-17-amazon-corretto-headless'
         when 'centos', 'centos_stream', 'redhat', 'almalinux', 'rocky', 'oracle'
           case node['platform_version'].to_i
-          when 7
-            'java-11-openjdk-devel'
           when 8, 9
             'java-17-openjdk-devel'
           when 10
@@ -218,6 +215,60 @@ module CincOmnibus
 
       def omnibus_env
         node.run_state[:omnibus_env] ||= Hash.new { |hash, key| hash[key] = [] }
+      end
+
+      # The load-shim variables and patch content helpers below back files
+      # dropped by the builder action; they reference new_resource, so are only
+      # valid in action context.
+
+      # Template variables for the non-Windows load-omnibus-toolchain.sh shim.
+      # Berkshelf and Java are Linux-only, so the template omits those version
+      # checks on macOS/FreeBSD.
+      def omnibus_toolchain_sh_variables(env)
+        {
+          install_dir: new_resource.toolchain_install_dir,
+          path: env.fetch('PATH').uniq.join(::File::PATH_SEPARATOR),
+          exports: env.reject { |key, _value| key == 'PATH' }
+                      .map { |key, value| "export #{key}=#{value.first}" }
+                      .join("\n"),
+          linux: linux?,
+        }
+      end
+
+      # Template variables for the Windows load-omnibus-toolchain.ps1 shim. The
+      # Windows PATH separator is ';'; File::PATH_SEPARATOR is ':' on the host.
+      def omnibus_toolchain_ps1_variables(env)
+        {
+          path: env.fetch('PATH').uniq.join(';'),
+          exports: env.reject { |key, _value| key == 'PATH' }
+                      .map { |key, value| "$env:#{key}='#{value.first}'" }
+                      .join("\n"),
+        }
+      end
+
+      def ruby_docker_copy_patch_content
+        <<~RUBY
+          # frozen_string_literal: true
+
+          require "fileutils"
+
+          # Fixes a linux 5.6 - 5.10 kernel bug around copy_file_range syscall
+          # https://github.com/docker/for-linux/issues/1015
+
+          module FileUtils
+            class Entry_
+              def copy_file(dest)
+                File.open(path) do |s|
+                  File.open(dest, 'wb', s.stat.mode) do |d|
+                    s.chmod s.lstat.mode
+                    IO.copy_stream(s, d)
+                    d.chmod(d.lstat.mode)
+                  end
+                end
+              end
+            end
+          end
+        RUBY
       end
 
       def default_toolchain_install_dir

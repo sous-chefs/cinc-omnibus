@@ -68,129 +68,6 @@ action_class do
 
     env
   end
-
-  def omnibus_toolchain_path(env)
-    env.fetch('PATH').uniq.join(::File::PATH_SEPARATOR)
-  end
-
-  def load_omnibus_toolchain_content(env)
-    install_dir = new_resource.toolchain_install_dir
-    path = omnibus_toolchain_path(env)
-    exports = env.reject { |key, _value| key == 'PATH' }
-                 .map { |key, value| "export #{key}=#{value.first}" }
-                 .join("\n")
-
-    <<~SCRIPT
-      #!/usr/bin/env bash
-
-      ###################################################################
-      # Load the base Omnibus environment
-      ###################################################################
-      export PATH="#{path}:$PATH"
-      #{exports}
-      ###################################################################
-      # Query tool versions
-      ###################################################################
-
-      echo ""
-      echo "========================================"
-      echo "= Tool Versions"
-      echo "========================================"
-      echo ""
-
-      echo "$(head -1 #{install_dir}/version-manifest.txt)"
-      echo ""
-
-      echo "Bash.........$(bash --version | head -1)"
-      echo "Berkshelf....$(berks --version | head -1)"
-      echo "Bundler......$(bundle --version | head -1)"
-      echo "Curl.........$(curl --version | head -1)"
-      echo "GCC..........$(gcc --version | head -1)"
-      echo "Git..........$(git --version | head -1)"
-      echo "Java.........$(java -version 2>&1 | head -1)"
-      echo "Make.........$(make --version | head -1)"
-      echo "Patch........$(patch --version | head -1)"
-      echo "Pkg-config...$(pkg-config --version)"
-      echo "Ruby.........$(ruby --version)"
-      echo "RubyGems.....$(gem --version)"
-      echo "Tar..........$(tar --version | head -1)"
-
-      echo ""
-      echo "========================================"
-    SCRIPT
-  end
-
-  def load_omnibus_toolchain_ps1_content(env)
-    # Windows PATH separator is ';'; File::PATH_SEPARATOR is ':' on the ChefSpec host.
-    path = env.fetch('PATH').uniq.join(';')
-    exports = env.reject { |key, _value| key == 'PATH' }
-                 .map { |key, value| "$env:#{key}='#{value.first}'" }
-                 .join("\n")
-
-    <<~SCRIPT
-      ###############################################################
-      # Load the base Omnibus environment
-      ###############################################################
-      #{exports}
-      $env:PATH="#{path};$env:PATH"
-
-      ###############################################################
-      # Query tool versions
-      ###############################################################
-
-      $env:OMNIBUS_GIT_VERSION=git --version
-      $env:OMNIBUS_RUBY_VERSION=ruby --version
-      $env:OMNIBUS_GEM_VERSION=gem --version
-      $env:OMNIBUS_BUNDLER_VERSION=bundle --version
-      $env:OMNIBUS_GCC_VERSION=(gcc --version)[0]
-      $env:OMNIBUS_MAKE_VERSION=(make --version)[0]
-      $env:OMNIBUS_SEVENZIP_VERSION=(7z -h)[1]
-      $env:OMNIBUS_WIX_HEAT_VERSION=(heat -help)[0]
-      $env:OMNIBUS_WIX_CANDLE_VERSION=(candle -help)[0]
-      $env:OMNIBUS_WIX_LIGHT_VERSION=(light -help)[0]
-
-      Write-Host " ========================================"
-      Write-Host " = Tool Versions"
-      Write-Host " ========================================"
-
-      Write-Host " 7-Zip..........$env:OMNIBUS_SEVENZIP_VERSION"
-      Write-Host " Bundler........$env:OMNIBUS_BUNDLER_VERSION"
-      Write-Host " GCC............$env:OMNIBUS_GCC_VERSION"
-      Write-Host " Git............$env:OMNIBUS_GIT_VERSION"
-      Write-Host " Make...........$env:OMNIBUS_MAKE_VERSION"
-      Write-Host " Ruby...........$env:OMNIBUS_RUBY_VERSION"
-      Write-Host " RubyGems.......$env:OMNIBUS_GEM_VERSION"
-      Write-Host " WiX:Heat.......$env:OMNIBUS_WIX_HEAT_VERSION"
-      Write-Host " WiX:Candle.....$env:OMNIBUS_WIX_CANDLE_VERSION"
-
-      Write-Host " ========================================"
-    SCRIPT
-  end
-
-  def ruby_docker_copy_patch_content
-    <<~RUBY
-      # frozen_string_literal: true
-
-      require "fileutils"
-
-      # Fixes a linux 5.6 - 5.10 kernel bug around copy_file_range syscall
-      # https://github.com/docker/for-linux/issues/1015
-
-      module FileUtils
-        class Entry_
-          def copy_file(dest)
-            File.open(path) do |s|
-              File.open(dest, 'wb', s.stat.mode) do |d|
-                s.chmod s.lstat.mode
-                IO.copy_stream(s, d)
-                d.chmod(d.lstat.mode)
-              end
-            end
-          end
-        end
-      end
-    RUBY
-  end
 end
 
 action :create do
@@ -226,7 +103,6 @@ action :create do
       package new_resource.packages
     end
   end
-  package 'devtoolset-10' if centos? && node['platform_version'].to_i == 7
 
   if windows? && new_resource.manage_msys2
     cinc_omnibus_msys2 new_resource.instance_name do
@@ -302,45 +178,27 @@ action :create do
 
   env = omnibus_toolchain_environment
 
-  file ::File.join(new_resource.build_user_home, '.gitconfig') do
+  cookbook_file ::File.join(new_resource.build_user_home, '.gitconfig') do
+    source 'gitconfig'
+    cookbook 'cinc-omnibus' # not the wrapper that declares the resource
     unless windows?
       owner new_resource.build_user
       group new_resource.build_group
       mode '0644'
     end
-    content <<~GITCONFIG
-      # This file is written by Cinc
-      # Do NOT modify this file by hand.
-
-      [user]
-        ; Set a sane user name and email. This makes git happy and prevents
-        ; spammy output on each git command.
-        name  = Omnibus
-        email = omnibus@cinc.sh
-      [color]
-        ; Since this is a build machine, we do not want colored output.
-        ui = false
-      [core]
-        editor = $EDITOR
-        whitespace = fix
-      [apply]
-        whitespace = fix
-      [push]
-        default = tracking
-      [branch]
-        autosetuprebase = always
-      [pull]
-        rebase = preserve
-    GITCONFIG
   end
 
   if windows?
-    file ::File.join(new_resource.build_user_home, 'load-omnibus-toolchain.ps1') do
-      content load_omnibus_toolchain_ps1_content(env)
+    template ::File.join(new_resource.build_user_home, 'load-omnibus-toolchain.ps1') do
+      source 'load-omnibus-toolchain.ps1.erb'
+      cookbook 'cinc-omnibus' # not the wrapper that declares the resource
+      variables omnibus_toolchain_ps1_variables(env)
     end
   else
-    file ::File.join(new_resource.build_user_home, 'load-omnibus-toolchain.sh') do
-      content load_omnibus_toolchain_content(env)
+    template ::File.join(new_resource.build_user_home, 'load-omnibus-toolchain.sh') do
+      source 'load-omnibus-toolchain.sh.erb'
+      cookbook 'cinc-omnibus' # not the wrapper that declares the resource
+      variables omnibus_toolchain_sh_variables(env)
       owner new_resource.build_user
       group new_resource.build_group
       mode '0755'
