@@ -5,6 +5,13 @@
 
 This file is used to list changes made in each version of the cinc-omnibus cookbook.
 
+## [4.1.1](https://github.com/sous-chefs/cinc-omnibus/compare/v4.1.0...v4.1.1) (2026-06-21)
+
+
+### Bug Fixes
+
+* make the macOS gitlab-runner code-signing path work headlessly ([#78](https://github.com/sous-chefs/cinc-omnibus/issues/78)) ([7387ef3](https://github.com/sous-chefs/cinc-omnibus/commit/7387ef39dd5b12d2646685f9ee9320eec90ab66b))
+
 ## [4.1.0](https://github.com/sous-chefs/cinc-omnibus/compare/v4.0.4...v4.1.0) (2026-06-21)
 
 
