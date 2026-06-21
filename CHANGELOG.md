@@ -5,6 +5,13 @@
 
 This file is used to list changes made in each version of the cinc-omnibus cookbook.
 
+## [4.1.0](https://github.com/sous-chefs/cinc-omnibus/compare/v4.0.4...v4.1.0) (2026-06-21)
+
+
+### Features
+
+* install and manage GitLab Runner on non-Linux builders ([#76](https://github.com/sous-chefs/cinc-omnibus/issues/76)) ([c012ce9](https://github.com/sous-chefs/cinc-omnibus/commit/c012ce93a7333b2abc48e71987d90f51d6c9d8d9))
+
 ## [4.0.4](https://github.com/sous-chefs/cinc-omnibus/compare/v4.0.3...v4.0.4) (2026-06-20)
 
 
