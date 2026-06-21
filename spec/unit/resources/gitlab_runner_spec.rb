@@ -5,6 +5,12 @@ require 'spec_helper'
 describe 'cinc_omnibus_gitlab_runner' do
   step_into :cinc_omnibus_gitlab_runner
 
+  # The guards are block form calling Helpers predicates (which shell out at
+  # converge time); stub them like msys2_spec does for its guards.
+  def stub_guard(name, value)
+    allow_any_instance_of(CincOmnibus::Cookbook::Helpers).to receive(name).and_return(value)
+  end
+
   recipe do
     cinc_omnibus_gitlab_runner 'default'
   end
@@ -13,11 +19,11 @@ describe 'cinc_omnibus_gitlab_runner' do
     platform 'mac_os_x', '12'
 
     before do
-      stub_command(/security find-identity/).and_return(false)
-      stub_command(/list-keychains/).and_return(false)
-      stub_command(/codesign -d/).and_return(false)
-      stub_command(/brew services list/).and_return(false)
-      stub_command(%r{stat -f %u /dev/console}).and_return(true)
+      stub_guard(:gitlab_runner_signing_identity_ready?, false)
+      stub_guard(:gitlab_runner_keychain_in_search_list?, false)
+      stub_guard(:gitlab_runner_binary_signed?, false)
+      stub_guard(:gitlab_runner_service_started?, false)
+      stub_guard(:gitlab_runner_console_owned_by_build_user?, true)
     end
 
     it { expect { chef_run }.to_not raise_error }
@@ -58,11 +64,11 @@ describe 'cinc_omnibus_gitlab_runner' do
     automatic_attributes['kernel']['machine'] = 'x86_64'
 
     before do
-      stub_command(/security find-identity/).and_return(false)
-      stub_command(/list-keychains/).and_return(false)
-      stub_command(/codesign -d/).and_return(false)
-      stub_command(/brew services list/).and_return(false)
-      stub_command(%r{stat -f %u /dev/console}).and_return(true)
+      stub_guard(:gitlab_runner_signing_identity_ready?, false)
+      stub_guard(:gitlab_runner_keychain_in_search_list?, false)
+      stub_guard(:gitlab_runner_binary_signed?, false)
+      stub_guard(:gitlab_runner_service_started?, false)
+      stub_guard(:gitlab_runner_console_owned_by_build_user?, true)
     end
 
     it 're-signs the Intel binary path' do
@@ -76,8 +82,8 @@ describe 'cinc_omnibus_gitlab_runner' do
     platform 'mac_os_x', '12'
 
     before do
-      stub_command(/brew services list/).and_return(false)
-      stub_command(%r{stat -f %u /dev/console}).and_return(true)
+      stub_guard(:gitlab_runner_service_started?, false)
+      stub_guard(:gitlab_runner_console_owned_by_build_user?, true)
     end
 
     recipe do
@@ -106,7 +112,7 @@ describe 'cinc_omnibus_gitlab_runner' do
   context 'on windows' do
     platform 'windows'
 
-    before { stub_command(/Get-Service/).and_return(false) }
+    before { stub_guard(:gitlab_runner_windows_service_installed?, false) }
 
     it { expect { chef_run }.to_not raise_error }
     it { is_expected.to install_chocolatey_package('gitlab-runner') }
@@ -121,6 +127,26 @@ describe 'cinc_omnibus_gitlab_runner' do
     it { expect { chef_run }.to_not raise_error }
     it { is_expected.to_not install_package('gitlab-runner') }
     it { is_expected.to_not run_execute('resign gitlab-runner') }
+  end
+
+  context 'with remove action on macos' do
+    platform 'mac_os_x', '12'
+
+    before do
+      stub_guard(:gitlab_runner_service_active?, true)
+      stub_guard(:gitlab_runner_signing_keychain_exists?, true)
+    end
+
+    recipe do
+      cinc_omnibus_gitlab_runner 'default' do
+        action :remove
+      end
+    end
+
+    it { is_expected.to run_execute('stop gitlab-runner service') }
+    it { is_expected.to run_execute('delete gitlab-runner signing keychain') }
+    it { is_expected.to delete_file('/Users/omnibus/finder-auth-flow.scpt') }
+    it { is_expected.to_not remove_package('gitlab-runner') }
   end
 
   context 'with remove action on freebsd' do
