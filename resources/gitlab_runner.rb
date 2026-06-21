@@ -70,7 +70,10 @@ action :create do
           KEYCHAIN=#{Shellwords.escape(keychain)}
           KCPASS=#{Shellwords.escape(password)}
           IDENTITY=#{Shellwords.escape(identity)}
-          [ -f "$KEYCHAIN" ] || security create-keychain -p "$KCPASS" "$KEYCHAIN"
+          # Recreate from scratch so we never accumulate duplicate identities
+          # (codesign --sign by name is ambiguous when more than one matches).
+          security delete-keychain "$KEYCHAIN" 2>/dev/null || true
+          security create-keychain -p "$KCPASS" "$KEYCHAIN"
           # Unlock BEFORE set-keychain-settings: on a locked keychain the latter
           # needs an interactive unlock, which fails ("User interaction is not
           # allowed") in a headless/non-GUI converge. With the password supplied
@@ -103,10 +106,11 @@ action :create do
           security import "$TMP/id.p12" -k "$KEYCHAIN" -P "$KCPASS" -T /usr/bin/codesign -A
           security set-key-partition-list -S apple-tool:,apple: -s -k "$KCPASS" "$KEYCHAIN" >/dev/null
         BASH
-        # No -v: a self-signed cert isn't trusted, so it never shows under
-        # "valid identities only" — match all identities so this stays idempotent
-        # (otherwise it re-imports a duplicate identity every converge).
-        not_if "security find-identity -p codesigning #{Shellwords.escape(keychain)} | grep -Fq #{Shellwords.escape(identity)}",
+        # Run unless EXACTLY ONE matching identity exists: 0 = not set up yet,
+        # 2+ = duplicates that make codesign --sign ambiguous; recreating the
+        # keychain above repairs both. No -v: a self-signed cert isn't trusted,
+        # so it never appears under "valid identities only".
+        not_if %([ "$(security find-identity -p codesigning #{Shellwords.escape(keychain)} 2>/dev/null | grep -Fc #{Shellwords.escape(identity)})" -eq 1 ]),
                user: build_user, environment: build_env
       end
 
