@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require 'shellwords'
+
 module CincOmnibus
   module Cookbook
     module Helpers
@@ -418,6 +420,123 @@ module CincOmnibus
       # Cellar; codesign follows it to sign the real Mach-O).
       def gitlab_runner_mac_binary(prefix = mac_brew_prefix)
         ::File.join(prefix, 'bin', 'gitlab-runner')
+      end
+
+      # The gitlab_runner_* helpers below back the cinc_omnibus_gitlab_runner
+      # provider's guards and scripts; they reference new_resource and shell out,
+      # so they are only valid in action context.
+
+      def gitlab_runner_build_env
+        { 'HOME' => new_resource.build_user_home }
+      end
+
+      def gitlab_runner_run_as_build_user(command)
+        shell_out(command, user: new_resource.build_user, environment: gitlab_runner_build_env)
+      end
+
+      # bash that (re)creates the dedicated signing keychain and a single stable
+      # self-signed code-signing identity.
+      def gitlab_runner_signing_keychain_script
+        <<~BASH
+          set -e
+          KEYCHAIN=#{Shellwords.escape(new_resource.signing_keychain)}
+          KCPASS=#{Shellwords.escape(new_resource.signing_keychain_password)}
+          IDENTITY=#{Shellwords.escape(new_resource.signing_identity)}
+          # Recreate from scratch so we never accumulate duplicate identities
+          # (codesign --sign by name is ambiguous when more than one matches).
+          security delete-keychain "$KEYCHAIN" 2>/dev/null || true
+          security create-keychain -p "$KCPASS" "$KEYCHAIN"
+          # Unlock BEFORE set-keychain-settings: on a locked keychain the latter
+          # needs an interactive unlock, which fails ("User interaction is not
+          # allowed") in a headless/non-GUI converge. With the password supplied
+          # up front, none of the commands below need an interactive session.
+          security unlock-keychain -p "$KCPASS" "$KEYCHAIN"
+          security set-keychain-settings "$KEYCHAIN"
+          TMP=$(mktemp -d)
+          trap 'rm -rf "$TMP"' EXIT
+          # Use a config file (not -addext) so the codeSigning EKU is set on every
+          # macOS LibreSSL version.
+          {
+            echo '[req]'
+            echo 'distinguished_name = dn'
+            echo 'x509_extensions = v3'
+            echo '[dn]'
+            echo '[v3]'
+            echo 'basicConstraints = critical,CA:FALSE'
+            echo 'keyUsage = critical,digitalSignature'
+            echo 'extendedKeyUsage = critical,codeSigning'
+          } > "$TMP/req.cnf"
+          # Use the system LibreSSL (/usr/bin/openssl), not whatever is on PATH:
+          # a Homebrew openssl@3 exports PKCS#12 with a SHA-256 MAC that macOS
+          # `security import` rejects ("MAC verification failed"). LibreSSL
+          # defaults to the SHA1-MAC/3DES form `security` reads natively.
+          /usr/bin/openssl req -x509 -newkey rsa:2048 -sha256 -days 3650 -nodes -keyout "$TMP/key.pem" -out "$TMP/cert.pem" -subj "/CN=$IDENTITY" -config "$TMP/req.cnf"
+          /usr/bin/openssl pkcs12 -export -out "$TMP/id.p12" -inkey "$TMP/key.pem" -in "$TMP/cert.pem" -passout pass:"$KCPASS"
+          security import "$TMP/id.p12" -k "$KEYCHAIN" -P "$KCPASS" -T /usr/bin/codesign -A
+          security set-key-partition-list -S apple-tool:,apple: -s -k "$KCPASS" "$KEYCHAIN" >/dev/null
+        BASH
+      end
+
+      # The resign command: unlock the keychain, re-sign with the stable identity,
+      # and verify. Kept non-hardened (no --options runtime) so the binary can
+      # send AppleEvents to Finder without the apple-events entitlement.
+      def gitlab_runner_resign_command
+        keychain = Shellwords.escape(new_resource.signing_keychain)
+        binary = Shellwords.escape(gitlab_runner_mac_binary)
+        [
+          "security unlock-keychain -p #{Shellwords.escape(new_resource.signing_keychain_password)} #{keychain}",
+          "codesign --force --sign #{Shellwords.escape(new_resource.signing_identity)} " \
+          "--identifier #{Shellwords.escape(new_resource.signing_identifier)} --keychain #{keychain} #{binary}",
+          "codesign --verify --strict #{binary}",
+        ].join(' && ')
+      end
+
+      # True when EXACTLY ONE matching identity exists: 0 = not set up yet, 2+ =
+      # duplicates that make codesign --sign ambiguous. No -v, since a self-signed
+      # cert is untrusted and never shows under "valid identities only".
+      def gitlab_runner_signing_identity_ready?
+        count = "security find-identity -p codesigning #{Shellwords.escape(new_resource.signing_keychain)} " \
+                "2>/dev/null | grep -Fc #{Shellwords.escape(new_resource.signing_identity)}"
+        gitlab_runner_run_as_build_user(%([ "$(#{count})" -eq 1 ])).exitstatus.zero?
+      end
+
+      def gitlab_runner_keychain_in_search_list?
+        gitlab_runner_run_as_build_user(
+          "security list-keychains -d user | grep -Fq #{Shellwords.escape(new_resource.signing_keychain)}"
+        ).exitstatus.zero?
+      end
+
+      # True when the binary already carries our stable identity (Authority CN and
+      # Identifier both match), so the resign is a no-op until the next upgrade
+      # replaces the binary.
+      def gitlab_runner_binary_signed?
+        binary = Shellwords.escape(gitlab_runner_mac_binary)
+        gitlab_runner_run_as_build_user(
+          "codesign -d --verbose=4 #{binary} 2>&1 | grep -Fq #{Shellwords.escape("Authority=#{new_resource.signing_identity}")} && " \
+          "codesign -d --verbose=4 #{binary} 2>&1 | grep -Fq #{Shellwords.escape("Identifier=#{new_resource.signing_identifier}")}"
+        ).exitstatus.zero?
+      end
+
+      def gitlab_runner_service_started?
+        gitlab_runner_run_as_build_user('brew services list | grep -E "^gitlab-runner[[:space:]]+started"').exitstatus.zero?
+      end
+
+      def gitlab_runner_service_active?
+        gitlab_runner_run_as_build_user('brew services list | grep -E "^gitlab-runner[[:space:]]+(started|scheduled)"').exitstatus.zero?
+      end
+
+      # The LaunchAgent loads into gui/<uid>, so brew services only works when
+      # build_user owns the console (is logged in); otherwise skip cleanly.
+      def gitlab_runner_console_owned_by_build_user?
+        gitlab_runner_run_as_build_user(%([ "$(stat -f %u /dev/console)" = "$(id -u #{Shellwords.escape(new_resource.build_user)})" ])).exitstatus.zero?
+      end
+
+      def gitlab_runner_signing_keychain_exists?
+        ::File.exist?(new_resource.signing_keychain)
+      end
+
+      def gitlab_runner_windows_service_installed?
+        !powershell_out('Get-Service -Name gitlab-runner -ErrorAction SilentlyContinue').stdout.strip.empty?
       end
     end
   end
