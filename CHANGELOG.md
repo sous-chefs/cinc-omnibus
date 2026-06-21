@@ -5,6 +5,13 @@
 
 This file is used to list changes made in each version of the cinc-omnibus cookbook.
 
+## [4.2.0](https://github.com/sous-chefs/cinc-omnibus/compare/v4.1.1...v4.2.0) (2026-06-21)
+
+
+### Features
+
+* render builder file content via templates and helpers ([#80](https://github.com/sous-chefs/cinc-omnibus/issues/80)) ([9aa8ef6](https://github.com/sous-chefs/cinc-omnibus/commit/9aa8ef623f4b8311b4b0b35ac5326b719e97babd))
+
 ## [4.1.1](https://github.com/sous-chefs/cinc-omnibus/compare/v4.1.0...v4.1.1) (2026-06-21)
 
 
