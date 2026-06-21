@@ -68,7 +68,6 @@ control 'default' do
       tzdata
       wget
     )
-    packages << %w(centos-release-scl devtoolset-10) if os_version.to_i == 7
     packages << %w(glibc-langpack-en glibc-locale-source) if os_version.to_i >= 8
     packages << %w(perl-FindBin perl-lib) if os_version.to_i >= 9
     packages << %w(zlib-devel) if os_version.to_i < 10
@@ -77,8 +76,6 @@ control 'default' do
     packages << %w(wget2-wget) if os_name == 'fedora'
     packages << if os_name == 'fedora'
                   %w(java-latest-openjdk-devel)
-                elsif os_version.to_i == 7
-                  %w(java-11-openjdk-devel)
                 elsif os_version.to_i >= 10
                   %w(java-21-openjdk-devel)
                 else

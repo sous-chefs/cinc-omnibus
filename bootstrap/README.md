@@ -26,9 +26,18 @@ one-line cookbook that calls `cinc_omnibus_builder 'default'`.
 
 ### Linux (Debian/Ubuntu, RHEL/Amazon/Fedora), macOS, and FreeBSD
 
+Run as **root**. The script installs packages and writes under `/opt`, and it never calls `sudo`
+itself, so launch it from a root shell:
+
 ```sh
-curl -L https://raw.githubusercontent.com/sous-chefs/cinc-omnibus/main/bootstrap/install.sh | sudo sh
+curl -L https://raw.githubusercontent.com/sous-chefs/cinc-omnibus/main/bootstrap/install.sh | sh
 ```
+
+On **macOS**, do **not** wrap the converge in `sudo` (e.g. `… | sudo sh`). The
+`cinc_omnibus_gitlab_runner` service is a per-user LaunchAgent that Homebrew loads into the build
+user's GUI (`gui/<uid>`) session; a `sudo`-wrapped run stays in the invoking user's session and
+can't bootstrap into the build user's domain, so the service step breaks. Run it from a real root
+session instead.
 
 The script is POSIX (`#!/bin/sh`) so it runs against `dash` / `ash` / `sh` on any of those
 platforms — no bash required to launch it. The Cinc omnitruck install step does pipe through
@@ -60,7 +69,7 @@ a PR before merge):
 Linux/macOS/FreeBSD:
 
 ```sh
-REPO_BRANCH=feat/cinc-toolchain-migration sudo -E sh install.sh
+REPO_BRANCH=feat/cinc-toolchain-migration sh install.sh
 ```
 
 Windows:
