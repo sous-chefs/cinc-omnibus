@@ -71,8 +71,12 @@ action :create do
           KCPASS=#{Shellwords.escape(password)}
           IDENTITY=#{Shellwords.escape(identity)}
           [ -f "$KEYCHAIN" ] || security create-keychain -p "$KCPASS" "$KEYCHAIN"
-          security set-keychain-settings "$KEYCHAIN"
+          # Unlock BEFORE set-keychain-settings: on a locked keychain the latter
+          # needs an interactive unlock, which fails ("User interaction is not
+          # allowed") in a headless/non-GUI converge. With the password supplied
+          # up front, none of the commands below need an interactive session.
           security unlock-keychain -p "$KCPASS" "$KEYCHAIN"
+          security set-keychain-settings "$KEYCHAIN"
           TMP=$(mktemp -d)
           trap 'rm -rf "$TMP"' EXIT
           # Use a config file (not -addext) so the codeSigning EKU is set on every
