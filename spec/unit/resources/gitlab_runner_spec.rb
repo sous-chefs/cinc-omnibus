@@ -14,6 +14,7 @@ describe 'cinc_omnibus_gitlab_runner' do
 
     before do
       stub_command(/security find-identity/).and_return(false)
+      stub_command(/list-keychains/).and_return(false)
       stub_command(/codesign -d/).and_return(false)
       stub_command(/brew services list/).and_return(false)
       stub_command(%r{stat -f %u /dev/console}).and_return(true)
@@ -24,6 +25,10 @@ describe 'cinc_omnibus_gitlab_runner' do
 
     it 'creates the stable signing identity' do
       is_expected.to run_bash('create gitlab-runner signing identity')
+    end
+
+    it 'adds the signing keychain to the search list so codesign can find it' do
+      is_expected.to run_execute('add gitlab-runner signing keychain to search list')
     end
 
     it 're-signs the Apple Silicon binary with the fixed identity' do
@@ -54,6 +59,7 @@ describe 'cinc_omnibus_gitlab_runner' do
 
     before do
       stub_command(/security find-identity/).and_return(false)
+      stub_command(/list-keychains/).and_return(false)
       stub_command(/codesign -d/).and_return(false)
       stub_command(/brew services list/).and_return(false)
       stub_command(%r{stat -f %u /dev/console}).and_return(true)

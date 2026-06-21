@@ -100,12 +100,27 @@ action :create do
             -subj "/CN=$IDENTITY" -config "$TMP/req.cnf"
           /usr/bin/openssl pkcs12 -export -out "$TMP/id.p12" \
             -inkey "$TMP/key.pem" -in "$TMP/cert.pem" -passout pass:"$KCPASS"
-          # codesign is pointed at this keychain explicitly (--keychain), so it
-          # need not be added to the user search list.
           security import "$TMP/id.p12" -k "$KEYCHAIN" -P "$KCPASS" -T /usr/bin/codesign -A
           security set-key-partition-list -S apple-tool:,apple: -s -k "$KCPASS" "$KEYCHAIN" >/dev/null
         BASH
-        not_if "security find-identity -v -p codesigning #{Shellwords.escape(keychain)} | grep -Fq #{Shellwords.escape(identity)}",
+        # No -v: a self-signed cert isn't trusted, so it never shows under
+        # "valid identities only" — match all identities so this stays idempotent
+        # (otherwise it re-imports a duplicate identity every converge).
+        not_if "security find-identity -p codesigning #{Shellwords.escape(keychain)} | grep -Fq #{Shellwords.escape(identity)}",
+               user: build_user, environment: build_env
+      end
+
+      # codesign discovers the signing identity through the user keychain search
+      # list (the --keychain flag alone is unreliable), so make sure our keychain
+      # is in it. Separate + idempotent so it also repairs hosts whose identity
+      # already exists. build_user's home has no spaces, so the unquoted rebuild
+      # of the existing list is safe.
+      execute 'add gitlab-runner signing keychain to search list' do
+        command "security list-keychains -d user -s #{Shellwords.escape(keychain)} " \
+                "$(security list-keychains -d user | tr -d '\"')"
+        user build_user
+        environment build_env
+        not_if "security list-keychains -d user | grep -Fq #{Shellwords.escape(keychain)}",
                user: build_user, environment: build_env
       end
 
