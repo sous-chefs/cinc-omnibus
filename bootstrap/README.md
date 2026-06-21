@@ -82,3 +82,31 @@ $env:REPO_BRANCH = 'feat/cinc-toolchain-migration'
    user, and the load shim.
 5. Uninstalls Cinc Client and removes the scratch workspace. The build node no longer needs Cinc
    to run omnibus builds — those use `omnibus-toolchain`'s own Ruby.
+
+## macOS: build user and SecureToken
+
+On macOS the `user` resource that creates the build user (`omnibus` by default) runs through Chef's
+`mac_user` provider, which always manages the account's **SecureToken**. Chef demands
+`secure_token_password`, `admin_username`, and `admin_password` whenever it has to *change* the
+token (desired state ≠ current state):
+
+```text
+Chef::Exceptions::User: secure_token_password, admin_username and admin_password
+properties are required to modify SecureToken
+```
+
+A build user created from scratch by the bootstrap has no SecureToken, so historically this only
+bit when the user *already existed with one* — e.g. created by hand in System Settings, or granted a
+token by logging into the GUI (macOS auto-grants a token to the first interactive login on a Mac
+that has none).
+
+`cinc_omnibus_builder` handles this automatically: before creating the build user it reads the
+account's current SecureToken state (`sysadminctl -secureTokenStatus`) and declares that *same*
+state on the `user` resource. Because desired always matches current, `mac_user` never tries to
+toggle the token and never needs credentials — whether the user has a token or not, and even if the
+token gets auto-granted between runs. No configuration is required.
+
+SecureToken is a FileVault disk-encryption credential (and, on Apple Silicon, confers volume-owner
+status); it is **not** required for ordinary GUI login, screen sharing, SSH, or code signing, and
+with FileVault off it has no practical effect. The cookbook neither grants nor removes it — it only
+avoids fighting whatever state the account is already in.

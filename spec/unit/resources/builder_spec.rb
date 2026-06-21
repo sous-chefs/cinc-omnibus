@@ -28,6 +28,8 @@ describe 'cinc_omnibus_builder' do
     it { is_expected.to create_file('/home/omnibus/.gitconfig') }
     it { is_expected.to create_file('/home/omnibus/load-omnibus-toolchain.sh') }
     it { is_expected.to create_file('/usr/local/share/ruby-docker-copy-patch.rb') }
+    # The runner lives on the Docker host on Linux, not the build node.
+    it { is_expected.to_not create_cinc_omnibus_gitlab_runner('default') }
   end
 
   context 'ubuntu - ppc64le' do
@@ -108,6 +110,7 @@ describe 'cinc_omnibus_builder' do
     # MSYS2 is managed by cinc_omnibus_msys2 (needs pacman), not choco.
     it { is_expected.to_not install_chocolatey_package('msys2') }
     it { is_expected.to install_cinc_omnibus_msys2('default') }
+    it { is_expected.to create_cinc_omnibus_gitlab_runner('default') }
 
     # File::ALT_SEPARATOR is nil on Linux (the chefspec host) so
     # windows_safe_path_join leaves forward slashes in place.
@@ -132,6 +135,10 @@ describe 'cinc_omnibus_builder' do
     platform 'mac_os_x', '12'
     automatic_attributes['kernel']['machine'] = 'x86_64'
 
+    stubs_for_provider('cinc_omnibus_builder[default]') do |provider|
+      allow(provider).to receive(:mac_build_user_secure_token?).and_return(false)
+    end
+
     recipe do
       cinc_omnibus_builder 'default'
     end
@@ -142,10 +149,33 @@ describe 'cinc_omnibus_builder' do
     it { is_expected.to_not create_file('/usr/local/share/ruby-docker-copy-patch.rb') }
     it { is_expected.to create_link('/usr/local/bin/libtoolize').with(to: '/usr/local/bin/glibtoolize') }
     it { is_expected.to_not create_link('/usr/local/bin/pkg-config') }
+    # No SecureToken detected on the build user -> declared false, no toggle.
+    it { is_expected.to create_user('omnibus').with(secure_token: false) }
+    it { is_expected.to create_cinc_omnibus_gitlab_runner('default') }
+  end
+
+  context 'on macos when the build user already has a SecureToken' do
+    platform 'mac_os_x', '12'
+
+    stubs_for_provider('cinc_omnibus_builder[default]') do |provider|
+      allow(provider).to receive(:mac_build_user_secure_token?).and_return(true)
+    end
+
+    recipe do
+      cinc_omnibus_builder 'default'
+    end
+
+    # Existing token is mirrored, so mac_user sees no divergence and converges.
+    it { expect { chef_run }.to_not raise_error }
+    it { is_expected.to create_user('omnibus').with(secure_token: true) }
   end
 
   context 'on macos arm64' do
     platform 'mac_os_x', '12'
+
+    stubs_for_provider('cinc_omnibus_builder[default]') do |provider|
+      allow(provider).to receive(:mac_build_user_secure_token?).and_return(false)
+    end
 
     recipe do
       cinc_omnibus_builder 'default'
@@ -168,6 +198,7 @@ describe 'cinc_omnibus_builder' do
     end
     it { is_expected.to create_file('/home/omnibus/load-omnibus-toolchain.sh') }
     it { is_expected.to_not create_file('/usr/local/share/ruby-docker-copy-patch.rb') }
+    it { is_expected.to create_cinc_omnibus_gitlab_runner('default') }
   end
 
   context 'debian - ppc64le' do

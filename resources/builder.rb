@@ -30,6 +30,10 @@ property :msys2_ignore_packages, Array, default: lazy { msys2_default_ignore_pac
 property :msys2_pinned_packages, Array, default: []
 property :msys2_base_archive_date, String, default: lazy { msys2_latest_base_archive_date }
 property :msys2_verify_signature, [true, false], default: true
+property :manage_gitlab_runner, [true, false], default: true
+property :manage_gitlab_runner_service, [true, false], default: true
+property :manage_gitlab_runner_signing, [true, false], default: true
+property :gitlab_runner_version, [String, nil]
 
 default_action :create
 
@@ -264,10 +268,16 @@ action :create do
       append true
     end
 
+    # Declare the build user's existing SecureToken state (macOS only) so the
+    # mac_user provider doesn't try to toggle it, which would need admin creds.
+    # Computed here, not in the block: sub-resource blocks can't see our helpers.
+    build_user_secure_token = mac_build_user_secure_token?(new_resource.build_user)
+
     user new_resource.build_user do
       home new_resource.build_user_home
       group new_resource.build_group
       shell new_resource.build_user_shell
+      secure_token build_user_secure_token if mac_os_x?
     end
   end
 
@@ -368,6 +378,18 @@ action :create do
       end
     end
   end
+
+  # Install the GitLab Runner on non-Linux builders (Linux runners live on the
+  # Docker host). Registration stays manual; this never runs `register`.
+  if new_resource.manage_gitlab_runner && !linux?
+    cinc_omnibus_gitlab_runner new_resource.instance_name do
+      build_user new_resource.build_user
+      build_user_home new_resource.build_user_home
+      version new_resource.gitlab_runner_version
+      manage_service new_resource.manage_gitlab_runner_service
+      manage_macos_signing new_resource.manage_gitlab_runner_signing
+    end
+  end
 end
 
 action :remove do
@@ -408,6 +430,16 @@ action :remove do
 
   if windows? && new_resource.manage_msys2 && new_resource.remove_packages
     cinc_omnibus_msys2 new_resource.instance_name do
+      action :remove
+    end
+  end
+
+  if new_resource.manage_gitlab_runner && !linux?
+    cinc_omnibus_gitlab_runner new_resource.instance_name do
+      build_user new_resource.build_user
+      build_user_home new_resource.build_user_home
+      manage_service new_resource.manage_gitlab_runner_service
+      remove_package new_resource.remove_packages
       action :remove
     end
   end

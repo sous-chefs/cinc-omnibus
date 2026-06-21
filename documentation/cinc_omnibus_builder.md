@@ -40,6 +40,10 @@ The toolchain package is sourced from the Cinc Project's package mirror via the 
 | `msys2_pinned_packages` | Array | `[]` | Exact `.pkg.tar.zst` files/URLs to `pacman -U`, passed to `cinc_omnibus_msys2`. |
 | `msys2_base_archive_date` | String | newest on the mirror | Dated MSYS2 base archive to install (defaults to the newest on the mirror), passed to `cinc_omnibus_msys2`. |
 | `msys2_verify_signature` | true, false | `true` | Verify the MSYS2 base archive's GPG signature, passed to `cinc_omnibus_msys2`. |
+| `manage_gitlab_runner` | true, false | `true` | Non-Linux only. Whether to install and manage the GitLab Runner via the [`cinc_omnibus_gitlab_runner`](cinc_omnibus_gitlab_runner.md) resource. No-op on Linux. |
+| `manage_gitlab_runner_service` | true, false | `true` | Whether the runner service is set up and started (passed to `cinc_omnibus_gitlab_runner`). |
+| `manage_gitlab_runner_signing` | true, false | `true` | macOS only. Whether to re-sign the runner binary with a fixed identity for a durable TCC grant (passed to `cinc_omnibus_gitlab_runner`). |
+| `gitlab_runner_version` | String, nil | `nil` | GitLab Runner version to install (passed to `cinc_omnibus_gitlab_runner`). |
 
 ## Platform notes
 
@@ -64,6 +68,13 @@ The toolchain package is sourced from the Cinc Project's package mirror via the 
   via pacman, and freezes gcc/binutils with `IgnorePkg` so upgrades are deliberate. The shim adds
   `C:\msys64\ucrt64\bin` and `C:\msys64\usr\bin` to PATH. Chocolatey is still used for the other
   Windows build tools (WiX, 7-Zip, the Windows SDK, Git).
+
+* **GitLab Runner (non-Linux only):** on macOS, FreeBSD, and Windows the builder also installs and
+  manages the GitLab Runner via the [`cinc_omnibus_gitlab_runner`](cinc_omnibus_gitlab_runner.md)
+  resource (unless `manage_gitlab_runner false`). Registration stays manual. On macOS it re-signs the
+  Homebrew binary with a fixed identity so the "control Finder" TCC grant survives upgrades — see that
+  resource's docs for the one-time bootstrap. On Linux this is a no-op (the runner lives on the Docker
+  host).
 
 ## Examples
 
