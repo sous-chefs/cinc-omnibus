@@ -49,6 +49,20 @@ dedicated keyring and runs `gpg --verify` on the downloaded archive via `remote_
 property, which fails the converge on a bad signature. `gpg` comes from Git for Windows, installed
 by `cinc_omnibus_builder`. Set `verify_signature false` to skip (not recommended).
 
+## Updates and partial-upgrade safety
+
+MSYS2 is a rolling release that only supports full system upgrades. Installing a single package
+against a stale database (`pacman -Sy <pkg>`) is a *partial upgrade*: a freshly fetched package
+links against a library soname (e.g. `msys-nettle-9.dll`) that the older, un-upgraded dependency
+no longer provides, producing `cannot open shared object file` errors at runtime. To avoid this,
+provisioning runs a full `pacman -Syuu` to bring the whole system to the mirror's current state
+*before* installing the build deps, so everything links against matching libraries.
+
+Because upgrading `msys2-runtime` swaps `msys-2.0.dll` out from under the running shell, the upgrade
+runs in up to two passes, reaping any process still holding the old runtime in between. The upgrade
+and install are guarded by the `etc/.cinc-packages-installed` sentinel, so they run once per builder;
+remove the sentinel and re-converge to pull updates.
+
 ## How gcc is controlled
 
 The MSYS2 base archive contains only the MSYS2 runtime — **never gcc**. The ucrt64 compiler is

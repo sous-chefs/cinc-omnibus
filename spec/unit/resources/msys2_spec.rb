@@ -53,9 +53,21 @@ describe 'cinc_omnibus_msys2' do
       expect(chef_run.ruby_block('set msys2 IgnorePkg')).to_not be_nil
     end
 
-    it 'refreshes and installs the ucrt64 toolchain' do
+    it 'fully upgrades the system before installing (no partial upgrades)' do
+      expect(chef_run).to run_execute('upgrade msys2 base (pass 1)')
+        .with(command: /pacman -Syuu --noconfirm/)
+      expect(chef_run).to run_execute('upgrade msys2 base (pass 2)')
+        .with(command: /pacman -Syuu --noconfirm/)
+    end
+
+    it 'reaps processes holding the old runtime between upgrade passes' do
+      expect(chef_run).to run_execute('reap msys2 runtime processes (pass 1)')
+        .with(command: /taskkill .*MODULES eq msys-2\.0\.dll/, returns: [0, 128])
+    end
+
+    it 'installs the ucrt64 toolchain from the upgraded db' do
       expect(chef_run).to run_execute('install msys2 packages')
-        .with(command: /pacman -Sy --needed --noconfirm .*mingw-w64-ucrt-x86_64-toolchain/)
+        .with(command: /pacman -S --needed --noconfirm .*mingw-w64-ucrt-x86_64-toolchain/)
     end
 
     it { is_expected.to_not run_execute('install pinned msys2 packages') }

@@ -77,19 +77,45 @@ action :install do
     creates initialized
   end
 
-  # Optional pin/rollback: install exact .pkg.tar.zst files (paths or URLs).
-  unless new_resource.pinned_packages.empty?
-    execute 'install pinned msys2 packages' do
-      command msys2_shell("pacman -U --needed --noconfirm #{new_resource.pinned_packages.join(' ')}")
+  installed = windows_safe_path_join(new_resource.install_dir, 'etc', '.cinc-packages-installed')
+
+  # Full `-Syuu` first: rolling-release MSYS2 only supports full upgrades, and
+  # `pacman -Sy <pkg>` partial-upgrades, linking new packages (wget) against
+  # sonames the old deps (nettle) no longer ship. Per MSYS2 CI guidance run it
+  # twice (core then the rest), reaping leftover runtime processes between.
+  # Redirect output so a keyring hook's dirmngr/gpg-agent can't hold Chef's pipe
+  # and hang (see the gpg reaper below); clear a stale db.lck from a killed pass.
+  # Guarded (with everything below) by the install sentinel, so it runs once.
+  upgrade_log = '/tmp/cinc-msys2-upgrade.log'
+  2.times do |pass|
+    execute "upgrade msys2 base (pass #{pass + 1})" do
+      command msys2_shell(%(rm -f /var/lib/pacman/db.lck; pacman -Syuu --noconfirm --overwrite "*" > #{upgrade_log} 2>&1))
+      timeout 900
+      ignore_failure true # a runtime swap can kill or hang this pass
+      not_if { ::File.exist?(installed) }
+    end
+
+    execute "reap msys2 runtime processes (pass #{pass + 1})" do
+      command 'taskkill /F /FI "MODULES eq msys-2.0.dll"'
+      returns [0, 128] # 128 = nothing matched
+      not_if { ::File.exist?(installed) }
     end
   end
 
-  # Refresh db and install; avoid full `pacman -Syu` (hangs on a runtime
-  # restart). Success-only sentinel keeps it idempotent (group queries are
-  # unreliable as a guard).
-  installed = windows_safe_path_join(new_resource.install_dir, 'etc', '.cinc-packages-installed')
+  # Optional pin/rollback: install exact .pkg.tar.zst files (paths or URLs)
+  # before the live install so the freeze below keeps them in place.
+  unless new_resource.pinned_packages.empty?
+    execute 'install pinned msys2 packages' do
+      command msys2_shell("pacman -U --needed --noconfirm #{new_resource.pinned_packages.join(' ')}")
+      not_if { ::File.exist?(installed) }
+    end
+  end
+
+  # Install the build deps from the db the upgrade just synced (no -y: reuse the
+  # consistent snapshot). Success-only sentinel keeps it idempotent (group
+  # queries are unreliable as a guard).
   execute 'install msys2 packages' do
-    command msys2_shell("pacman -Sy --needed --noconfirm #{new_resource.packages.join(' ')} && touch /etc/.cinc-packages-installed")
+    command msys2_shell("pacman -S --needed --noconfirm #{new_resource.packages.join(' ')} && touch /etc/.cinc-packages-installed")
     creates installed
   end
 
