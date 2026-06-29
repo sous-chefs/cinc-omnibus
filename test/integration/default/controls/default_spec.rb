@@ -165,6 +165,7 @@ control 'default' do
       autoconf
       automake
       git
+      gnu-tar
       libffi
       libtool
       libyaml
@@ -287,6 +288,22 @@ control 'default' do
     tool_cmds.each do |cmd|
       describe command "PATH='#{install_dir}/bin:/usr/local/bin:#{unix_path}' #{cmd}" do
         its('exit_status') { should eq 0 }
+      end
+    end
+
+    # macOS system tar is bsdtar; the builder links /usr/local/bin/tar -> gtar,
+    # so the global `tar` must resolve to GNU tar.
+    if os.darwin?
+      describe command "PATH='/usr/local/bin:#{unix_path}' tar --version" do
+        its('stdout') { should match(/GNU tar/) }
+      end
+
+      # Where Remote Login is limited to specific users (the SACL group exists),
+      # the builder keeps the build user in it so operators can log in.
+      if command('dseditgroup -o read com.apple.access_ssh').exit_status.zero?
+        describe command 'dseditgroup -o checkmember -m omnibus com.apple.access_ssh' do
+          its('exit_status') { should eq 0 }
+        end
       end
     end
   end

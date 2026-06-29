@@ -126,6 +126,7 @@ module CincOmnibus
             autoconf
             automake
             git
+            gnu-tar
             libffi
             libtool
             libyaml
@@ -460,6 +461,26 @@ module CincOmnibus
         "#{status.stdout}#{status.stderr}".match?(/Secure token is ENABLED/)
       rescue Errno::ENOENT
         false
+      end
+
+      # macOS Remote Login limited to specific users gates on membership in the
+      # com.apple.access_ssh Service ACL; the build user's primary-group change
+      # can drop it, so the builder re-adds the user.
+      def mac_ssh_access_grant_command(user)
+        "dseditgroup -o edit -a #{Shellwords.escape(user)} -t user com.apple.access_ssh"
+      end
+
+      # True when the build user is already in that SSH access group.
+      def mac_ssh_access_granted?(user)
+        shell_out('dseditgroup', '-o', 'checkmember', '-m', user, 'com.apple.access_ssh').exitstatus.zero?
+      end
+
+      # True when Remote Login is limited to specific users: the SACL group
+      # exists only in that mode (it's renamed *-disabled for "all users"), so
+      # its presence is the signal to manage membership — and the guard that
+      # keeps us from flipping an all-users host into restricted mode.
+      def mac_ssh_access_restricted?
+        shell_out('dseditgroup', '-o', 'read', 'com.apple.access_ssh').exitstatus.zero?
       end
 
       # Homebrew's prefix: /opt/homebrew on Apple Silicon, /usr/local on Intel.
