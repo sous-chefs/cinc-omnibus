@@ -48,7 +48,7 @@ jobs:
 
     steps:
       - name: Check out code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
       - name: Install Cinc Workstation
         uses: sous-chefs/.github/.github/actions/install-workstation@8.0.4
       - name: Dokken
@@ -65,7 +65,7 @@ jobs:
     runs-on: windows-latest
     steps:
       - name: Check out code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
       - name: Install Cinc Workstation
         uses: sous-chefs/.github/.github/actions/install-workstation@8.0.4
       - name: Test Kitchen
@@ -81,7 +81,7 @@ jobs:
     runs-on: macos-latest
     steps:
       - name: Check out code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
       - name: Install Cinc Workstation
         uses: sous-chefs/.github/.github/actions/install-workstation@8.0.4
       - name: Test Kitchen
