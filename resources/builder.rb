@@ -222,18 +222,35 @@ action :create do
   end
 
   if mac_os_x?
-    # Homebrew names libtool's binary glibtoolize, and on Apple Silicon puts
-    # pkg-config outside the default omnibus PATH.
+    # Homebrew names libtool's binary glibtoolize and ships GNU tar as gtar (the
+    # system bsdtar rejects GNU options like --warning=no-file-changed); on Apple
+    # Silicon it also puts pkg-config outside the default omnibus PATH.
     brew_prefix = arm? ? '/opt/homebrew' : '/usr/local'
 
     link '/usr/local/bin/libtoolize' do
       to ::File.join(brew_prefix, 'bin', 'glibtoolize')
     end
 
+    # /usr/local/bin precedes /usr/bin in the default macOS PATH, so this makes
+    # GNU tar the global `tar`.
+    link '/usr/local/bin/tar' do
+      to ::File.join(brew_prefix, 'bin', 'gtar')
+    end
+
     if arm?
       link '/usr/local/bin/pkg-config' do
         to ::File.join(brew_prefix, 'bin', 'pkg-config')
       end
+    end
+
+    # Setting the build user's primary group to `omnibus` can drop it from the
+    # com.apple.access_ssh SACL, locking it out where Remote Login is limited to
+    # specific users. Re-add it — but only when that SACL exists, so we never
+    # flip an all-users host into restricted mode. Idempotent via checkmember.
+    execute 'grant build user ssh access' do
+      command mac_ssh_access_grant_command(new_resource.build_user)
+      only_if { mac_ssh_access_restricted? }
+      not_if  { mac_ssh_access_granted?(new_resource.build_user) }
     end
   end
 

@@ -9,6 +9,12 @@ describe 'cinc_omnibus_builder' do
   before do
     allow_any_instance_of(Chef::HTTP::Simple).to receive(:get)
       .and_return('msys2-base-x86_64-20260611.sfx.exe')
+    # macOS build-user SSH-access grant guards (unused off macOS): SACL present
+    # (restricted Remote Login) and the build user not yet a member.
+    allow_any_instance_of(CincOmnibus::Cookbook::Helpers)
+      .to receive(:mac_ssh_access_restricted?).and_return(true)
+    allow_any_instance_of(CincOmnibus::Cookbook::Helpers)
+      .to receive(:mac_ssh_access_granted?).and_return(false)
   end
 
   context 'on ubuntu' do
@@ -144,11 +150,13 @@ describe 'cinc_omnibus_builder' do
     end
 
     it { expect { chef_run }.to_not raise_error }
-    it { is_expected.to install_package(%w(autoconf automake git libffi libtool libyaml openssl@3 pkgconf readline)) }
+    it { is_expected.to install_package(%w(autoconf automake git gnu-tar libffi libtool libyaml openssl@3 pkgconf readline)) }
     it { is_expected.to create_template('/Users/omnibus/load-omnibus-toolchain.sh') }
     it { is_expected.to_not create_file('/usr/local/share/ruby-docker-copy-patch.rb') }
     it { is_expected.to create_link('/usr/local/bin/libtoolize').with(to: '/usr/local/bin/glibtoolize') }
+    it { is_expected.to create_link('/usr/local/bin/tar').with(to: '/usr/local/bin/gtar') }
     it { is_expected.to_not create_link('/usr/local/bin/pkg-config') }
+    it { is_expected.to run_execute('grant build user ssh access').with(command: 'dseditgroup -o edit -a omnibus -t user com.apple.access_ssh') }
     # No SecureToken detected on the build user -> declared false, no toggle.
     it { is_expected.to create_user('omnibus').with(secure_token: false) }
     it { is_expected.to create_cinc_omnibus_gitlab_runner('default') }
@@ -182,7 +190,9 @@ describe 'cinc_omnibus_builder' do
     end
 
     it { is_expected.to create_link('/usr/local/bin/libtoolize').with(to: '/opt/homebrew/bin/glibtoolize') }
+    it { is_expected.to create_link('/usr/local/bin/tar').with(to: '/opt/homebrew/bin/gtar') }
     it { is_expected.to create_link('/usr/local/bin/pkg-config').with(to: '/opt/homebrew/bin/pkg-config') }
+    it { is_expected.to run_execute('grant build user ssh access') }
   end
 
   context 'on freebsd' do

@@ -52,9 +52,12 @@ The toolchain package is sourced from the Cinc Project's package mirror via the 
   `/usr/local/share/ruby-docker-copy-patch.rb`, and on Debian ARM versions older than 12 creates
   `/usr/bin/mkdir` and `/bin/install` compatibility symlinks.
 * **macOS:** installs Homebrew prerequisites, installs the `omnibus-toolchain` `.pkg`, and creates
-  `/usr/local/bin/libtoolize` → Homebrew's `glibtoolize`. On Apple Silicon also creates
+  `/usr/local/bin/libtoolize` → Homebrew's `glibtoolize` and `/usr/local/bin/tar` → Homebrew's
+  `gtar` (the system `tar` is bsdtar, which rejects GNU options). On Apple Silicon also creates
   `/usr/local/bin/pkg-config` → Homebrew's `pkg-config`, since the Homebrew prefix
-  (`/opt/homebrew`) isn't on the default omnibus PATH.
+  (`/opt/homebrew`) isn't on the default omnibus PATH. Because the build user's primary group is
+  set to `omnibus`, it also keeps the user in the `com.apple.access_ssh` group so SSH logins keep
+  working when Remote Login is limited to specific users.
 * **FreeBSD:** installs `pkg` prerequisites and the `omnibus-toolchain` self-extracting `.sh`.
 * **Windows:** installs chocolatey and the build tools it manages (WiX, 7-Zip, the Windows SDK,
   Git), installs the `omnibus-toolchain` `.msi` to `C:\cinc-project\omnibus-toolchain`, skips the
