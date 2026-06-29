@@ -5,6 +5,13 @@
 
 This file is used to list changes made in each version of the cinc-omnibus cookbook.
 
+## [4.2.1](https://github.com/sous-chefs/cinc-omnibus/compare/v4.2.0...v4.2.1) (2026-06-29)
+
+
+### Bug Fixes
+
+* keep the macOS build user SSH-reachable and default tar to GNU tar ([#82](https://github.com/sous-chefs/cinc-omnibus/issues/82)) ([cca62d5](https://github.com/sous-chefs/cinc-omnibus/commit/cca62d5f5942d14e0f2d11ff0b0ee4c3227f82d7))
+
 ## [4.2.0](https://github.com/sous-chefs/cinc-omnibus/compare/v4.1.1...v4.2.0) (2026-06-21)
 
 
