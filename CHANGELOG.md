@@ -5,6 +5,13 @@
 
 This file is used to list changes made in each version of the cinc-omnibus cookbook.
 
+## [4.2.2](https://github.com/sous-chefs/cinc-omnibus/compare/v4.2.1...v4.2.2) (2026-06-30)
+
+
+### Bug Fixes
+
+* full-upgrade MSYS2 before installing build deps ([#84](https://github.com/sous-chefs/cinc-omnibus/issues/84)) ([49dcd81](https://github.com/sous-chefs/cinc-omnibus/commit/49dcd81a4a70036dc082c8cb176cdd8f58cbea46))
+
 ## [4.2.1](https://github.com/sous-chefs/cinc-omnibus/compare/v4.2.0...v4.2.1) (2026-06-29)
 
 
