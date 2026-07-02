@@ -8,13 +8,10 @@ provisioner:
   enforce_idempotency: true
   deprecations_as_errors: true
   chef_license: accept-no-persist
+  policyfile: Policyfile.rb
 
 verifier:
   name: inspec
-
-x-run_lists:
-  default: &default_run_list
-    - recipe[test::default]
 
 x-verifiers:
   default: &default_verifier
@@ -56,5 +53,6 @@ platforms:
 
 suites:
   - name: default
-    run_list: *default_run_list
+    provisioner:
+      named_run_list: default
     verifier: *default_verifier
