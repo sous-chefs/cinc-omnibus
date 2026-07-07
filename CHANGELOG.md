@@ -5,6 +5,13 @@
 
 This file is used to list changes made in each version of the cinc-omnibus cookbook.
 
+## [4.2.3](https://github.com/sous-chefs/cinc-omnibus/compare/v4.2.2...v4.2.3) (2026-07-07)
+
+
+### Bug Fixes
+
+* **msys2:** Enforce ucrt64-only toolchain and rebase after provisioning ([#89](https://github.com/sous-chefs/cinc-omnibus/issues/89)) ([a25cb55](https://github.com/sous-chefs/cinc-omnibus/commit/a25cb55c78cb8ba9f332e317dbe2841f071c18a9))
+
 ## [4.2.2](https://github.com/sous-chefs/cinc-omnibus/compare/v4.2.1...v4.2.2) (2026-06-30)
 
 
