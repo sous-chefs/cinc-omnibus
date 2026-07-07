@@ -388,6 +388,21 @@ module CincOmnibus
         shell_out('tasklist /nh').stdout.match?(/gpg-agent\.exe|dirmngr\.exe/i)
       end
 
+      # True when any mingw toolchain other than ucrt64 (msvcrt/i686/clang)
+      # is installed.
+      def msys2_foreign_toolchains_present?
+        shell_out(msys2_shell(%(pacman -Qq | grep -E "^mingw-w64-" | grep -qvE "^mingw-w64-ucrt-x86_64-"))).exitstatus.zero?
+      end
+
+      # Sentinel written after a successful post-provisioning rebase.
+      def msys2_rebased_sentinel
+        windows_safe_path_join(new_resource.install_dir, 'etc', '.cinc-rebased')
+      end
+
+      def msys2_rebased?
+        ::File.exist?(msys2_rebased_sentinel)
+      end
+
       # PATH entries for the Windows load shim: tools the omnibus toolchain
       # shells out to (WiX, 7-Zip, Windows SDK, Git, MSYS2) but doesn't add itself.
       def windows_path_entries(install_dir = default_toolchain_install_dir)
