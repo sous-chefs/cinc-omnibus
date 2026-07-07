@@ -102,6 +102,14 @@ action :install do
     end
   end
 
+  # Enforce ucrt64-only on every converge: extra toolchains (msvcrt/i686/clang)
+  # bloat the DLL footprint past the rebase address window and destabilize
+  # native-gem links (silent `ld returned 116`). See cinc_omnibus_msys2.md.
+  execute 'evict foreign mingw toolchains' do
+    command msys2_shell(%(pacman -Qq | grep -E "^mingw-w64-" | grep -vE "^mingw-w64-ucrt-x86_64-" | xargs -r pacman -Rns --noconfirm))
+    only_if { msys2_foreign_toolchains_present? }
+  end
+
   # Optional pin/rollback: install exact .pkg.tar.zst files (paths or URLs)
   # before the live install so the freeze below keeps them in place.
   unless new_resource.pinned_packages.empty?
@@ -117,6 +125,21 @@ action :install do
   execute 'install msys2 packages' do
     command msys2_shell("pacman -S --needed --noconfirm #{new_resource.packages.join(' ')} && touch /etc/.cinc-packages-installed")
     creates installed
+  end
+
+  # Rebase once after all package operations (the reaped upgrade passes can
+  # leave pacman's rebase hooks unrun). autorebase.bat must run from cmd with
+  # no msys2 processes holding DLLs; `&&` writes the sentinel only on success
+  # so a failed rebase retries on the next converge.
+  execute 'reap msys2 processes before rebase' do
+    command 'taskkill /F /FI "MODULES eq msys-2.0.dll"'
+    returns [0, 128] # 128 = nothing matched
+    not_if { msys2_rebased? }
+  end
+
+  execute 'rebase msys2' do
+    command %("#{windows_safe_path_join(new_resource.install_dir, 'autorebase.bat')}" && type nul > "#{msys2_rebased_sentinel}")
+    creates msys2_rebased_sentinel
   end
 
   # Freeze the compiler against `pacman -Syu`. Must run AFTER install:

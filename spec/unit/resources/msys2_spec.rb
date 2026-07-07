@@ -6,11 +6,12 @@ describe 'cinc_omnibus_msys2' do
   step_into :cinc_omnibus_msys2
   platform 'windows'
 
-  # Stub the gpg key guard, the daemon-present guard, and the mirror-listing
-  # HTTP GET (no network).
+  # Stub the gpg key guard, the daemon-present guard, the foreign-toolchain
+  # guard, and the mirror-listing HTTP GET (no network).
   before do
     stub_command(/--list-keys/).and_return(false)
     allow_any_instance_of(CincOmnibus::Cookbook::Helpers).to receive(:msys2_gpg_daemons_running?).and_return(true)
+    allow_any_instance_of(CincOmnibus::Cookbook::Helpers).to receive(:msys2_foreign_toolchains_present?).and_return(true)
     allow_any_instance_of(Chef::HTTP::Simple).to receive(:get)
       .and_return('msys2-base-x86_64-20250830.sfx.exe msys2-base-x86_64-20260611.sfx.exe')
   end
@@ -71,6 +72,18 @@ describe 'cinc_omnibus_msys2' do
     end
 
     it { is_expected.to_not run_execute('install pinned msys2 packages') }
+
+    it 'evicts non-ucrt64 mingw toolchains (msvcrt/i686/clang)' do
+      expect(chef_run).to run_execute('evict foreign mingw toolchains')
+        .with(command: /grep -vE "\^mingw-w64-ucrt-x86_64-" \| xargs -r pacman -Rns --noconfirm/)
+    end
+
+    it 'reaps msys2 processes then rebases after the toolchain install' do
+      expect(chef_run).to run_execute('reap msys2 processes before rebase')
+        .with(command: /taskkill .*MODULES eq msys-2\.0\.dll/, returns: [0, 128])
+      expect(chef_run).to run_execute('rebase msys2')
+        .with(command: /autorebase\.bat.* && type nul > .*\.cinc-rebased/)
+    end
 
     it 'reaps the gpg-agent/dirmngr daemons so the converge can return' do
       expect(chef_run).to run_execute('stop msys2 gpg daemons')

@@ -63,6 +63,33 @@ runs in up to two passes, reaping any process still holding the old runtime in b
 and install are guarded by the `etc/.cinc-packages-installed` sentinel, so they run once per builder;
 remove the sentinel and re-converge to pull updates.
 
+## Toolchain hygiene: ucrt64 only
+
+The resource enforces a **ucrt64-only** invariant on every converge: any installed mingw toolchain
+other than `mingw-w64-ucrt-x86_64-*` (the msvcrt `mingw-w64-x86_64-*` set, i686, clang) is removed
+with `pacman -Rns`. `pacman -S --needed` only ever adds packages, so without this an adopted,
+hand-grown builder keeps every toolchain it accumulated. A second toolchain roughly doubles the
+DLL footprint, which exhausts the rebase address window (`rebase: Too many DLLs for available
+address space`) and destabilizes native-gem link steps — the failure surfaces as a silent
+`collect2.exe: error: ld returned 116 exit status` with no linker diagnostic.
+
+## Rebase
+
+After the upgrade and toolchain install, the resource reaps any process still holding
+`msys-2.0.dll` and runs `autorebase.bat` once (sentinel: `etc/.cinc-rebased`). The mass
+upgrade/install shifts hundreds of DLL base addresses, and the runtime reaping between upgrade
+passes can interrupt pacman's own rebase hooks; left inconsistent, that state later produces fork
+failures and the same silent `ld returned 116` link errors under load. The sentinel is written only
+when the rebase succeeds, so a failed rebase retries on the next converge. `autorebase.bat` must
+run from the Windows shell (not an MSYS2 shell), which is how the resource invokes it.
+
+## Maintenance: repair by re-converge, not by hand
+
+Running ad-hoc `pacman` on a live builder is how installs drift into the partial-upgrade and
+DLL-bloat failure modes above. The supported repair path for a degraded MSYS2 is `action :remove`
+followed by a re-converge (~15 minutes), which rebuilds the toolchain from a verified base into a
+known-good, freshly rebased state.
+
 ## How gcc is controlled
 
 The MSYS2 base archive contains only the MSYS2 runtime — **never gcc**. The ucrt64 compiler is
@@ -78,6 +105,12 @@ Control comes from two levers:
    fresh builders, host the specific `.pkg.tar.zst` files (these usually already exist in
    `C:\msys64\var\cache\pacman\pkg` on a working builder) and pass them here. They are installed
    with `pacman -U` before the live `pacman -S`, and the freeze keeps them in place.
+
+For a fleet, prefer the pin over the freeze alone: the freeze locks whatever bleeding-edge
+gcc/binutils the mirror shipped on each builder's converge day, so two builders provisioned weeks
+apart run different compilers. Pinning a validated set makes every builder identical and makes a
+compiler upgrade an explicit, reviewable change. (A just-released binutils was the prime suspect
+in a run of silent `ld returned 116` native-gem link failures.)
 
 ## Examples
 
