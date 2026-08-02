@@ -139,6 +139,7 @@ module CincOmnibus
             autoconf
             automake
             bash
+            ca_root_nss
             gcc
             git
             libffi

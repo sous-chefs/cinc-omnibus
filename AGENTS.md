@@ -50,6 +50,9 @@ project's CI; the cookbook's Kitchen suites stay x86_64-only.
 | FreeBSD | `pkg` packages + `omnibus-toolchain` self-extracting `.sh` |
 | Windows | `omnibus-toolchain` `.msi` (build deps live in the runner image) |
 
+On FreeBSD the cookbook links `/usr/local/openssl/cert.pem` (the ports OpenSSL's `OPENSSLDIR`, which
+`ca_root_nss` leaves empty) to the `ca_root_nss` bundle, so RVM-built rubies can verify TLS.
+
 On macOS the cookbook also creates compatibility symlinks in `/usr/local/bin` so that the
 canonical autotools names resolve against Homebrew's renamed binaries: `libtoolize` →
 `glibtoolize` always, and on Apple Silicon also `pkg-config` → Homebrew's `pkg-config` shim

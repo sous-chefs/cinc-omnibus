@@ -25,6 +25,7 @@ builds run in Docker containers and the runner lives on the Docker host, not the
 | `instance_name` | String | name property | Resource name. |
 | `version` | String, nil | `nil` (package default / latest) | Version to pass to the platform package provider. Best-effort on Homebrew (which tracks the latest formula). |
 | `manage_service` | true, false | `true` | Whether to set up and start the runner service (macOS LaunchAgent, FreeBSD rc.d, Windows service). |
+| `manage_sudoers` | true, false | `true` | macOS and FreeBSD: drop a sudoers file granting the account the runner runs as passwordless sudo — `/etc/sudoers.d/<build_user>` on macOS, `/usr/local/etc/sudoers.d/gitlab-runner` on FreeBSD (where `sudo` is also installed). |
 | `build_user` | String | `'omnibus'` | macOS only: the user whose GUI session the LaunchAgent runs in, and who owns the signing keychain. |
 | `build_user_home` | String | platform-specific | Home of `build_user`. |
 | `manage_macos_signing` | true, false | `true` | macOS only: re-sign the binary with a fixed self-signed identity so the Automation/TCC grant survives upgrades (see below). |
@@ -50,6 +51,13 @@ builds run in Docker containers and the runner lives on the Docker host, not the
   only (re)starts it when `build_user` owns the console — enable **auto-login** for `build_user` so
   it's logged in across reboots and converges. On a host with no one logged in, the start step is
   skipped (rather than failing the run) and the agent loads at next login.
+* **Sudo:** writes `/etc/sudoers.d/<build_user>` (mode `0440`, validated with `visudo -cf`) granting
+  `<build_user> ALL = (ALL) NOPASSWD:ALL`. The build script renames `/opt/omnibus-toolchain` aside
+  and re-creates the install dir through `sudo` from a non-interactive job, so that account cannot be
+  prompted for a password. The grant is named for `build_user` (the account the LaunchAgent runs as),
+  unlike FreeBSD where the port's own `gitlab-runner` user is the one that needs it. `sudo` ships
+  with macOS and `/etc/sudoers` already includes `sudoers.d`, so nothing is installed. Set
+  `manage_sudoers false` to opt out.
 * **The TCC "control Finder" problem and the fix.** That Finder AppleScript needs the macOS TCC
   **Automation** permission (`gitlab-runner` → Finder). Homebrew ships `gitlab-runner` as a Go
   binary that is ad-hoc signed at build time, so its code-signing identity (cdhash) changes on every
@@ -95,6 +103,10 @@ builds run in Docker containers and the runner lives on the Docker host, not the
   is no GitLab-official FreeBSD package, and **no upstream `freebsd-arm64` binary** — rely on the
   port (built for the host arch) on arm64 hosts.
 * **Service:** enabled and started via rc.d (`gitlab_runner`).
+* **Sudo:** installs `sudo` and writes `/usr/local/etc/sudoers.d/gitlab-runner` (mode `0440`,
+  validated with `visudo -cf`) granting `gitlab-runner ALL = (ALL) NOPASSWD:ALL`. The omnibus build
+  renames `/opt/omnibus-toolchain` aside and runs omnibus itself as root from a non-interactive job,
+  so the runner user cannot be prompted for a password. Set `manage_sudoers false` to opt out.
 
 ### Windows
 
