@@ -43,6 +43,7 @@ The toolchain package is sourced from the Cinc Project's package mirror via the 
 | `manage_gitlab_runner` | true, false | `true` | Non-Linux only. Whether to install and manage the GitLab Runner via the [`cinc_omnibus_gitlab_runner`](cinc_omnibus_gitlab_runner.md) resource. No-op on Linux. |
 | `manage_gitlab_runner_service` | true, false | `true` | Whether the runner service is set up and started (passed to `cinc_omnibus_gitlab_runner`). |
 | `manage_gitlab_runner_signing` | true, false | `true` | macOS only. Whether to re-sign the runner binary with a fixed identity for a durable TCC grant (passed to `cinc_omnibus_gitlab_runner`). |
+| `manage_gitlab_runner_sudoers` | true, false | `true` | macOS and FreeBSD. Whether to grant the account the runner runs as passwordless sudo via a `sudoers.d` drop-in (passed to `cinc_omnibus_gitlab_runner`). |
 | `gitlab_runner_version` | String, nil | `nil` | GitLab Runner version to install (passed to `cinc_omnibus_gitlab_runner`). |
 
 ## Platform notes
@@ -58,7 +59,11 @@ The toolchain package is sourced from the Cinc Project's package mirror via the 
   (`/opt/homebrew`) isn't on the default omnibus PATH. Because the build user's primary group is
   set to `omnibus`, it also keeps the user in the `com.apple.access_ssh` group so SSH logins keep
   working when Remote Login is limited to specific users.
-* **FreeBSD:** installs `pkg` prerequisites and the `omnibus-toolchain` self-extracting `.sh`.
+* **FreeBSD:** installs `pkg` prerequisites and the `omnibus-toolchain` self-extracting `.sh`. Also
+  links `/usr/local/openssl/cert.pem` → `/usr/local/share/certs/ca-root-nss.crt`: the ports OpenSSL
+  compiles in `/usr/local/openssl` as its `OPENSSLDIR`, but `ca_root_nss` only populates
+  `/usr/local/etc/ssl` and `/usr/local/share/certs`, so anything linked against it (an RVM-built
+  Ruby, notably) fails TLS verification with "unable to get local issuer certificate".
 * **Windows:** installs chocolatey and the build tools it manages (WiX, 7-Zip, the Windows SDK,
   Git), installs the `omnibus-toolchain` `.msi` to `C:\cinc-project\omnibus-toolchain`, skips the
   omnibus user/group creation, and writes `load-omnibus-toolchain.ps1` instead of the bash shim.

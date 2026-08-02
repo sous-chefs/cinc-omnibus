@@ -57,6 +57,60 @@ describe 'cinc_omnibus_gitlab_runner' do
         user: 'omnibus'
       )
     end
+
+    # The LaunchAgent runs as build_user, so the grant is named for that account
+    # rather than for gitlab-runner as on FreeBSD.
+    it 'grants the build user passwordless sudo' do
+      is_expected.to create_file('/etc/sudoers.d/omnibus').with(
+        content: "omnibus ALL = (ALL) NOPASSWD:ALL\n",
+        owner: 'root',
+        group: 'wheel',
+        mode: '0440'
+      )
+    end
+
+    # sudo is part of the macOS base system; nothing to install.
+    it { is_expected.to_not install_package('sudo') }
+  end
+
+  context 'on macos with a custom build user' do
+    platform 'mac_os_x', '12'
+
+    before do
+      stub_guard(:gitlab_runner_service_started?, false)
+      stub_guard(:gitlab_runner_console_owned_by_build_user?, true)
+    end
+
+    recipe do
+      cinc_omnibus_gitlab_runner 'default' do
+        build_user 'builder'
+        manage_macos_signing false
+      end
+    end
+
+    it 'names the sudoers drop-in for that user' do
+      is_expected.to create_file('/etc/sudoers.d/builder').with(
+        content: "builder ALL = (ALL) NOPASSWD:ALL\n"
+      )
+    end
+  end
+
+  context 'on macos with manage_sudoers false' do
+    platform 'mac_os_x', '12'
+
+    before do
+      stub_guard(:gitlab_runner_service_started?, false)
+      stub_guard(:gitlab_runner_console_owned_by_build_user?, true)
+    end
+
+    recipe do
+      cinc_omnibus_gitlab_runner 'default' do
+        manage_sudoers false
+        manage_macos_signing false
+      end
+    end
+
+    it { is_expected.to_not create_file('/etc/sudoers.d/omnibus') }
   end
 
   context 'on macos intel' do
@@ -107,6 +161,31 @@ describe 'cinc_omnibus_gitlab_runner' do
     it { is_expected.to start_service('gitlab_runner') }
     # No macOS signing/AppleScript on FreeBSD.
     it { is_expected.to_not run_execute('resign gitlab-runner') }
+
+    # The build renames /opt/omnibus-toolchain aside and runs omnibus as root.
+    it { is_expected.to install_package('sudo') }
+
+    it 'grants the runner user passwordless sudo' do
+      is_expected.to create_file('/usr/local/etc/sudoers.d/gitlab-runner').with(
+        content: "gitlab-runner ALL = (ALL) NOPASSWD:ALL\n",
+        owner: 'root',
+        group: 'wheel',
+        mode: '0440'
+      )
+    end
+  end
+
+  context 'on freebsd with manage_sudoers false' do
+    platform 'freebsd', '12.1'
+
+    recipe do
+      cinc_omnibus_gitlab_runner 'default' do
+        manage_sudoers false
+      end
+    end
+
+    it { is_expected.to_not create_file('/usr/local/etc/sudoers.d/gitlab-runner') }
+    it { is_expected.to_not install_package('sudo') }
   end
 
   context 'on windows' do
@@ -146,6 +225,7 @@ describe 'cinc_omnibus_gitlab_runner' do
     it { is_expected.to run_execute('stop gitlab-runner service') }
     it { is_expected.to run_execute('delete gitlab-runner signing keychain') }
     it { is_expected.to delete_file('/Users/omnibus/finder-auth-flow.scpt') }
+    it { is_expected.to delete_file('/etc/sudoers.d/omnibus') }
     it { is_expected.to_not remove_package('gitlab-runner') }
   end
 
@@ -160,6 +240,7 @@ describe 'cinc_omnibus_gitlab_runner' do
 
     it { is_expected.to disable_service('gitlab_runner') }
     it { is_expected.to stop_service('gitlab_runner') }
+    it { is_expected.to delete_file('/usr/local/etc/sudoers.d/gitlab-runner') }
     # Package removal is opt-in.
     it { is_expected.to_not remove_package('gitlab-runner') }
   end

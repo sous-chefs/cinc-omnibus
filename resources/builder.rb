@@ -33,6 +33,7 @@ property :msys2_verify_signature, [true, false], default: true
 property :manage_gitlab_runner, [true, false], default: true
 property :manage_gitlab_runner_service, [true, false], default: true
 property :manage_gitlab_runner_signing, [true, false], default: true
+property :manage_gitlab_runner_sudoers, [true, false], default: true
 property :gitlab_runner_version, [String, nil]
 
 default_action :create
@@ -254,6 +255,18 @@ action :create do
     end
   end
 
+  if freebsd?
+    # The ports OpenSSL's OPENSSLDIR is /usr/local/openssl, but ca_root_nss only
+    # populates /usr/local/etc/ssl and /usr/local/share/certs. Without a cert.pem
+    # there, anything linked against it (an RVM-built ruby, notably) fails TLS
+    # verification with "unable to get local issuer certificate".
+    directory '/usr/local/openssl'
+
+    link '/usr/local/openssl/cert.pem' do
+      to '/usr/local/share/certs/ca-root-nss.crt'
+    end
+  end
+
   # Install the GitLab Runner on non-Linux builders (Linux runners live on the
   # Docker host). Registration stays manual; this never runs `register`.
   if new_resource.manage_gitlab_runner && !linux?
@@ -263,6 +276,7 @@ action :create do
       version new_resource.gitlab_runner_version
       manage_service new_resource.manage_gitlab_runner_service
       manage_macos_signing new_resource.manage_gitlab_runner_signing
+      manage_sudoers new_resource.manage_gitlab_runner_sudoers
     end
   end
 end
@@ -314,6 +328,7 @@ action :remove do
       build_user new_resource.build_user
       build_user_home new_resource.build_user_home
       manage_service new_resource.manage_gitlab_runner_service
+      manage_sudoers new_resource.manage_gitlab_runner_sudoers
       remove_package new_resource.remove_packages
       action :remove
     end

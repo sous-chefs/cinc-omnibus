@@ -151,6 +151,7 @@ control 'default' do
     packages = %w(
       autoconf
       automake
+      ca_root_nss
       gcc
       git
       libffi
@@ -304,6 +305,21 @@ control 'default' do
         describe command 'dseditgroup -o checkmember -m omnibus com.apple.access_ssh' do
           its('exit_status') { should eq 0 }
         end
+      end
+    end
+
+    # The ports OpenSSL reads /usr/local/openssl/cert.pem, which ca_root_nss
+    # does not create; without it TLS verification fails against the trust store.
+    if os_name == 'freebsd'
+      describe file('/usr/local/openssl/cert.pem') do
+        it { should be_symlink }
+        its('link_path') { should eq '/usr/local/share/certs/ca-root-nss.crt' }
+      end
+
+      # /usr/bin/openssl is base (OPENSSLDIR /etc/ssl) and would pass regardless;
+      # the ports binary is the one omnibus builds link against.
+      describe command '/usr/local/bin/openssl s_client -connect rubygems.cinc.sh:443 -verify_return_error </dev/null' do
+        its('exit_status') { should eq 0 }
       end
     end
   end

@@ -203,11 +203,13 @@ describe 'cinc_omnibus_builder' do
     end
 
     it { expect { chef_run }.to_not raise_error }
-    %w(autoconf automake gcc git libffi libtool libyaml openssl pkgconf readline).each do |pkg|
+    %w(autoconf automake ca_root_nss gcc git libffi libtool libyaml openssl pkgconf readline).each do |pkg|
       it { is_expected.to install_package(pkg) }
     end
     it { is_expected.to create_template('/home/omnibus/load-omnibus-toolchain.sh') }
     it { is_expected.to_not create_file('/usr/local/share/ruby-docker-copy-patch.rb') }
+    it { is_expected.to create_directory('/usr/local/openssl') }
+    it { is_expected.to create_link('/usr/local/openssl/cert.pem').with(to: '/usr/local/share/certs/ca-root-nss.crt') }
     it { is_expected.to create_cinc_omnibus_gitlab_runner('default') }
   end
 

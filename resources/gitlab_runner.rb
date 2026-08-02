@@ -10,6 +10,7 @@ include CincOmnibus::Cookbook::Helpers
 property :instance_name, String, name_property: true
 property :version, [String, nil]
 property :manage_service, [true, false], default: true
+property :manage_sudoers, [true, false], default: true
 property :build_user, String, default: 'omnibus'
 property :build_user_home, String, default: lazy { default_build_user_home }
 
@@ -45,6 +46,20 @@ action :create do
 
     package 'gitlab-runner' do
       version new_resource.version if new_resource.version
+    end
+
+    # The build script renames /opt/omnibus-toolchain aside and re-creates the
+    # install_dir through sudo from a non-interactive job, so the account the
+    # LaunchAgent runs as needs passwordless sudo. sudo ships with macOS, and
+    # /etc/sudoers already carries the sudoers.d includedir.
+    if new_resource.manage_sudoers
+      file "/etc/sudoers.d/#{build_user}" do
+        content "#{build_user} ALL = (ALL) NOPASSWD:ALL\n"
+        owner 'root'
+        group 'wheel'
+        mode '0440'
+        verify 'visudo -cf %{path}'
+      end
     end
 
     if new_resource.manage_macos_signing
@@ -139,6 +154,21 @@ action :create do
       version new_resource.version if new_resource.version
     end
 
+    # The build jobs shell out to sudo from a non-interactive runner session —
+    # /opt/omnibus-toolchain is renamed aside and omnibus itself runs as root —
+    # so the port's gitlab-runner user needs passwordless sudo.
+    if new_resource.manage_sudoers
+      package 'sudo'
+
+      file '/usr/local/etc/sudoers.d/gitlab-runner' do
+        content "gitlab-runner ALL = (ALL) NOPASSWD:ALL\n"
+        owner 'root'
+        group 'wheel'
+        mode '0440'
+        verify 'visudo -cf %{path}'
+      end
+    end
+
     service 'gitlab_runner' do
       action [:enable, :start]
     end if new_resource.manage_service
@@ -200,6 +230,10 @@ action :remove do
       action :delete
     end
 
+    file "/etc/sudoers.d/#{build_user}" do
+      action :delete
+    end if new_resource.manage_sudoers
+
     package 'gitlab-runner' do
       action :remove
     end if new_resource.remove_package
@@ -207,6 +241,10 @@ action :remove do
     service 'gitlab_runner' do
       action [:stop, :disable]
     end if new_resource.manage_service
+
+    file '/usr/local/etc/sudoers.d/gitlab-runner' do
+      action :delete
+    end if new_resource.manage_sudoers
 
     package 'gitlab-runner' do
       action :remove
