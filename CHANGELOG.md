@@ -5,6 +5,13 @@
 
 This file is used to list changes made in each version of the cinc-omnibus cookbook.
 
+## [4.3.0](https://github.com/sous-chefs/cinc-omnibus/compare/v4.2.3...v4.3.0) (2026-08-02)
+
+
+### Features
+
+* Fix FreeBSD OpenSSL trust and add runner sudo grants ([#92](https://github.com/sous-chefs/cinc-omnibus/issues/92)) ([cbc616c](https://github.com/sous-chefs/cinc-omnibus/commit/cbc616c62a9ed1752a45efca6f5da9335a96e264))
+
 ## [4.2.3](https://github.com/sous-chefs/cinc-omnibus/compare/v4.2.2...v4.2.3) (2026-07-07)
 
 
