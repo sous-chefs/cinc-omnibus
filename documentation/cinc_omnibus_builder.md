@@ -63,7 +63,9 @@ The toolchain package is sourced from the Cinc Project's package mirror via the 
   links `/usr/local/openssl/cert.pem` → `/usr/local/share/certs/ca-root-nss.crt`: the ports OpenSSL
   compiles in `/usr/local/openssl` as its `OPENSSLDIR`, but `ca_root_nss` only populates
   `/usr/local/etc/ssl` and `/usr/local/share/certs`, so anything linked against it (an RVM-built
-  Ruby, notably) fails TLS verification with "unable to get local issuer certificate".
+  Ruby, notably) fails TLS verification with "unable to get local issuer certificate". The load
+  shim prepends `/usr/local/libexec/ccache` to `PATH` so builds pick up the `ccache` port's
+  compiler wrappers, matching what ports' `bsd.ccache.mk` does.
 * **Windows:** installs chocolatey and the build tools it manages (WiX, 7-Zip, the Windows SDK,
   Git), installs the `omnibus-toolchain` `.msi` to `C:\cinc-project\omnibus-toolchain`, skips the
   omnibus user/group creation, and writes `load-omnibus-toolchain.ps1` instead of the bash shim.

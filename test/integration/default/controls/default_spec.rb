@@ -152,6 +152,7 @@ control 'default' do
       autoconf
       automake
       ca_root_nss
+      ccache
       gcc
       git
       libffi
@@ -320,6 +321,22 @@ control 'default' do
       # the ports binary is the one omnibus builds link against.
       describe command '/usr/local/bin/openssl s_client -connect rubygems.cinc.sh:443 -verify_return_error </dev/null' do
         its('exit_status') { should eq 0 }
+      end
+
+      # ccache only speeds builds up if its wrappers win over the real compilers,
+      # so the shim has to export that dir ahead of them.
+      describe file('/usr/local/libexec/ccache/gcc') do
+        it { should exist }
+      end
+
+      describe file("#{build_user_home}/#{shim_name}") do
+        its('content') do
+          should match(%r{^export PATH="/usr/local/libexec/ccache:#{install_dir}/bin:/usr/local/bin:\$PATH"$})
+        end
+      end
+
+      describe command "PATH='/usr/local/libexec/ccache:#{install_dir}/bin:/usr/local/bin:#{unix_path}' command -v gcc" do
+        its('stdout') { should match(%r{^/usr/local/libexec/ccache/gcc$}) }
       end
     end
   end
