@@ -5,6 +5,13 @@
 
 This file is used to list changes made in each version of the cinc-omnibus cookbook.
 
+## [4.3.2](https://github.com/sous-chefs/cinc-omnibus/compare/v4.3.1...v4.3.2) (2026-08-16)
+
+
+### Bug Fixes
+
+* **macos:** put Homebrew git on PATH and mark the runner checkout safe ([#96](https://github.com/sous-chefs/cinc-omnibus/issues/96)) ([424a169](https://github.com/sous-chefs/cinc-omnibus/commit/424a169c796a62019c06dc513da34ece3b66dca8))
+
 ## [4.3.1](https://github.com/sous-chefs/cinc-omnibus/compare/v4.3.0...v4.3.1) (2026-08-16)
 
 
