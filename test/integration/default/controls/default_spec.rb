@@ -313,7 +313,12 @@ control 'default' do
       if command('uname -m').stdout.strip == 'arm64'
         describe file('/usr/local/bin/git') do
           it { should be_symlink }
-          its('link_path') { should eq '/opt/homebrew/bin/git' }
+        end
+
+        # link_path resolves the whole chain, and Homebrew's own shim points
+        # into a versioned Cellar path, so assert the target we manage.
+        describe command('readlink /usr/local/bin/git') do
+          its('stdout') { should match(%r{^/opt/homebrew/bin/git$}) }
         end
       end
 
