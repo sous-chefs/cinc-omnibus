@@ -22,6 +22,8 @@ property :mixlib_install_version, String, default: '3.12.30'
 property :ruby_docker_copy_patch_path, String, default: '/usr/local/share/ruby-docker-copy-patch.rb'
 property :manage_ruby_docker_copy_patch, [true, false], default: true
 property :manage_debian_arm_links, [true, false], default: true
+property :git_safe_directories, Array, default: lazy { default_git_safe_directories(build_user_home) }
+property :manage_root_gitconfig, [true, false], default: true
 property :extra_environment, Hash, default: {}
 property :remove_packages, [true, false], default: false
 property :manage_msys2, [true, false], default: true
@@ -182,12 +184,29 @@ action :create do
 
   env = omnibus_toolchain_environment
 
-  cookbook_file ::File.join(new_resource.build_user_home, '.gitconfig') do
-    source 'gitconfig'
+  gitconfig_variables = { safe_directories: new_resource.git_safe_directories }
+
+  template ::File.join(new_resource.build_user_home, '.gitconfig') do
+    source 'gitconfig.erb'
     cookbook 'cinc-omnibus' # not the wrapper that declares the resource
+    variables gitconfig_variables
     unless windows?
       owner new_resource.build_user
       group new_resource.build_group
+      mode '0644'
+    end
+  end
+
+  # The macOS build step runs `sudo -E`, which today keeps HOME pointed at the
+  # build user, so root reads the file above. Give root its own copy so the
+  # build keeps working if that ever stops holding.
+  if mac_os_x? && new_resource.manage_root_gitconfig
+    template ::File.join(mac_root_home, '.gitconfig') do
+      source 'gitconfig.erb'
+      cookbook 'cinc-omnibus' # not the wrapper that declares the resource
+      variables gitconfig_variables
+      owner 'root'
+      group 'wheel'
       mode '0644'
     end
   end
@@ -245,6 +264,15 @@ action :create do
       link '/usr/local/bin/pkg-config' do
         to ::File.join(brew_prefix, 'bin', 'pkg-config')
       end
+
+      # Apple's /usr/bin/git (2.32.1) predates both the sudo-aware ownership
+      # check and safe.directory globs, so `sudo -E` builds reject the runner's
+      # checkout. Intel reaches Homebrew's git through /usr/local/bin for free.
+      # Guarded: a dangling link here would shadow /usr/bin/git for every caller.
+      link '/usr/local/bin/git' do
+        to ::File.join(brew_prefix, 'bin', 'git')
+        only_if { ::File.exist?(::File.join(brew_prefix, 'bin', 'git')) }
+      end
     end
 
     # Setting the build user's primary group to `omnibus` can drop it from the
@@ -294,6 +322,10 @@ action :remove do
   file ::File.join(new_resource.build_user_home, '.gitconfig') do
     action :delete
   end
+
+  file ::File.join(mac_root_home, '.gitconfig') do
+    action :delete
+  end if mac_os_x? && new_resource.manage_root_gitconfig
 
   if windows?
     file ::File.join(new_resource.build_user_home, 'load-omnibus-toolchain.ps1') do

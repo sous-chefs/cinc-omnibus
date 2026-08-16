@@ -31,11 +31,19 @@ describe 'cinc_omnibus_builder' do
     it { is_expected.to upgrade_chef_ingredient('omnibus-toolchain') }
     it { is_expected.to create_group('omnibus') }
     it { is_expected.to create_user('omnibus') }
-    it { is_expected.to create_cookbook_file('/home/omnibus/.gitconfig') }
+    it { is_expected.to create_template('/home/omnibus/.gitconfig') }
     it { is_expected.to create_template('/home/omnibus/load-omnibus-toolchain.sh') }
     it { is_expected.to create_file('/usr/local/share/ruby-docker-copy-patch.rb') }
     # The runner lives on the Docker host on Linux, not the build node.
     it { is_expected.to_not create_cinc_omnibus_gitlab_runner('default') }
+
+    it 'marks the runner build tree safe for git' do
+      expect(chef_run).to render_file('/home/omnibus/.gitconfig')
+        .with_content(%r{^\s*directory = /home/omnibus/builds/\*$})
+    end
+
+    # Root gets its own copy on macOS only.
+    it { is_expected.to_not create_template('/var/root/.gitconfig') }
   end
 
   context 'ubuntu - ppc64le' do
@@ -135,6 +143,10 @@ describe 'cinc_omnibus_builder' do
     it { is_expected.to_not install_build_essential('cinc-omnibus') }
     it { is_expected.to_not create_group('omnibus') }
     it { is_expected.to_not create_user('omnibus') }
+
+    # No sudo step to accommodate, and a drive letter would need escaping in a
+    # git config value.
+    it { is_expected.to_not render_file('C:/omnibus/.gitconfig').with_content(/^\[safe\]$/) }
   end
 
   context 'on macos intel' do
@@ -156,6 +168,9 @@ describe 'cinc_omnibus_builder' do
     it { is_expected.to create_link('/usr/local/bin/libtoolize').with(to: '/usr/local/bin/glibtoolize') }
     it { is_expected.to create_link('/usr/local/bin/tar').with(to: '/usr/local/bin/gtar') }
     it { is_expected.to_not create_link('/usr/local/bin/pkg-config') }
+    # Homebrew's prefix already is /usr/local here, so a link would point at
+    # itself; Intel has been reaching Homebrew's git this way all along.
+    it { is_expected.to_not create_link('/usr/local/bin/git') }
     it { is_expected.to run_execute('grant build user ssh access').with(command: 'dseditgroup -o edit -a omnibus -t user com.apple.access_ssh') }
     # No SecureToken detected on the build user -> declared false, no toggle.
     it { is_expected.to create_user('omnibus').with(secure_token: false) }
@@ -189,10 +204,89 @@ describe 'cinc_omnibus_builder' do
       cinc_omnibus_builder 'default'
     end
 
+    # Homebrew git is present, as the package install earlier in the run leaves it.
+    before do
+      allow(::File).to receive(:exist?).and_call_original
+      allow(::File).to receive(:exist?).with('/opt/homebrew/bin/git').and_return(true)
+    end
+
     it { is_expected.to create_link('/usr/local/bin/libtoolize').with(to: '/opt/homebrew/bin/glibtoolize') }
     it { is_expected.to create_link('/usr/local/bin/tar').with(to: '/opt/homebrew/bin/gtar') }
     it { is_expected.to create_link('/usr/local/bin/pkg-config').with(to: '/opt/homebrew/bin/pkg-config') }
     it { is_expected.to run_execute('grant build user ssh access') }
+
+    # Apple's /usr/bin/git (2.32.1) is too old for both safe.directory globs
+    # and the SUDO_UID bypass, and /opt/homebrew/bin is off the default PATH.
+    it { is_expected.to create_link('/usr/local/bin/git').with(to: '/opt/homebrew/bin/git') }
+
+    it 'marks the runner build tree safe for the build user and for root' do
+      expect(chef_run).to create_template('/Users/omnibus/.gitconfig').with(owner: 'omnibus')
+      expect(chef_run).to create_template('/var/root/.gitconfig').with(owner: 'root', group: 'wheel')
+
+      ['/Users/omnibus/.gitconfig', '/var/root/.gitconfig'].each do |gitconfig|
+        expect(chef_run).to render_file(gitconfig)
+          .with_content(%r{^\s*directory = /Users/omnibus/builds/\*$})
+      end
+    end
+  end
+
+  context 'on macos arm64 without Homebrew git' do
+    platform 'mac_os_x', '12'
+
+    stubs_for_provider('cinc_omnibus_builder[default]') do |provider|
+      allow(provider).to receive(:mac_build_user_secure_token?).and_return(false)
+    end
+
+    before do
+      allow(::File).to receive(:exist?).and_call_original
+      allow(::File).to receive(:exist?).with('/opt/homebrew/bin/git').and_return(false)
+    end
+
+    recipe do
+      cinc_omnibus_builder 'default'
+    end
+
+    # A dangling link would shadow /usr/bin/git for every caller, including the
+    # runner's own clone step, so skipping beats breaking git outright.
+    it { is_expected.to_not create_link('/usr/local/bin/git') }
+  end
+
+  context 'on macos with manage_root_gitconfig false' do
+    platform 'mac_os_x', '12'
+
+    stubs_for_provider('cinc_omnibus_builder[default]') do |provider|
+      allow(provider).to receive(:mac_build_user_secure_token?).and_return(false)
+    end
+
+    recipe do
+      cinc_omnibus_builder 'default' do
+        manage_root_gitconfig false
+      end
+    end
+
+    it { is_expected.to create_template('/Users/omnibus/.gitconfig') }
+    it { is_expected.to_not create_template('/var/root/.gitconfig') }
+  end
+
+  context 'on macos with git_safe_directories overridden' do
+    platform 'mac_os_x', '12'
+
+    stubs_for_provider('cinc_omnibus_builder[default]') do |provider|
+      allow(provider).to receive(:mac_build_user_secure_token?).and_return(false)
+    end
+
+    recipe do
+      cinc_omnibus_builder 'default' do
+        git_safe_directories %w(/Users/omnibus/builds/tNVf4YpFJ/0/cinc-project/distribution/omnibus-software)
+      end
+    end
+
+    it 'writes exactly the configured entries' do
+      expect(chef_run).to render_file('/Users/omnibus/.gitconfig')
+        .with_content(%r{^\s*directory = /Users/omnibus/builds/tNVf4YpFJ/0/cinc-project/distribution/omnibus-software$})
+      expect(chef_run).to_not render_file('/Users/omnibus/.gitconfig')
+        .with_content(%r{directory = /Users/omnibus/builds/\*})
+    end
   end
 
   context 'on freebsd' do
@@ -335,5 +429,19 @@ describe 'cinc_omnibus_builder' do
     it { is_expected.to delete_file('/home/omnibus/load-omnibus-toolchain.sh') }
     it { is_expected.to delete_file('/usr/local/share/ruby-docker-copy-patch.rb') }
     it { is_expected.to delete_directory('/var/cache/omnibus') }
+    it { is_expected.to_not delete_file('/var/root/.gitconfig') }
+  end
+
+  context 'with remove action on macos' do
+    platform 'mac_os_x', '12'
+
+    recipe do
+      cinc_omnibus_builder 'default' do
+        action :remove
+      end
+    end
+
+    it { is_expected.to delete_file('/Users/omnibus/.gitconfig') }
+    it { is_expected.to delete_file('/var/root/.gitconfig') }
   end
 end
