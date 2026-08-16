@@ -5,6 +5,13 @@
 
 This file is used to list changes made in each version of the cinc-omnibus cookbook.
 
+## [4.3.1](https://github.com/sous-chefs/cinc-omnibus/compare/v4.3.0...v4.3.1) (2026-08-16)
+
+
+### Bug Fixes
+
+* **freebsd:** install ccache and put its wrappers on PATH ([#94](https://github.com/sous-chefs/cinc-omnibus/issues/94)) ([ed5290c](https://github.com/sous-chefs/cinc-omnibus/commit/ed5290c91c3bade83b48280d0e82b63433666cf5))
+
 ## [4.3.0](https://github.com/sous-chefs/cinc-omnibus/compare/v4.2.3...v4.3.0) (2026-08-02)
 
 
