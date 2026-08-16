@@ -307,6 +307,55 @@ control 'default' do
           its('exit_status') { should eq 0 }
         end
       end
+
+      # Apple Silicon has no Homebrew bin dir on the default PATH, so without
+      # this link builds fall back to /usr/bin/git (2.32.1).
+      if command('uname -m').stdout.strip == 'arm64'
+        describe file('/usr/local/bin/git') do
+          it { should be_symlink }
+          its('link_path') { should eq '/opt/homebrew/bin/git' }
+        end
+      end
+
+      # A trailing /* in safe.directory is only honored from git 2.46 on.
+      git_version = command("PATH='/usr/local/bin:#{unix_path}' git --version").stdout[/\d+\.\d+(\.\d+)?/]
+
+      describe "git on PATH (#{git_version.inspect})" do
+        subject { Gem::Version.new(git_version || '0') }
+        it { should be >= Gem::Version.new('2.46') }
+      end
+
+      # The build step runs `sudo -E`, so git reads the build user's config as
+      # root; root keeps its own copy for the case where HOME isn't preserved.
+      safe_directory = %r{^\s*directory = /Users/omnibus/builds/\*$}
+
+      describe file("#{build_user_home}/.gitconfig") do
+        its('content') { should match safe_directory }
+      end
+
+      describe command('sudo -n cat /var/root/.gitconfig') do
+        its('exit_status') { should eq 0 }
+        its('stdout') { should match safe_directory }
+      end
+
+      # What actually broke: root's git rejected the runner's build-user-owned
+      # checkout, so `git describe` failed and omnibus versioned packages 0.0.0.
+      # SUDO_UID is cleared so this proves safe.directory works on its own,
+      # rather than git's sudo bypass masking a config that never applied.
+      probe_root = "#{build_user_home}/builds/inspec-safe-directory"
+      probe = <<~SH
+        sudo -n -u omnibus mkdir -p #{probe_root}/0/probe &&
+        sudo -n -u omnibus git init -q #{probe_root}/0/probe &&
+        sudo -n env -u SUDO_UID HOME=#{build_user_home} git -C #{probe_root}/0/probe rev-parse --git-dir
+        rc=$?
+        sudo -n rm -rf #{probe_root}
+        exit $rc
+      SH
+
+      describe command(probe) do
+        its('exit_status') { should eq 0 }
+        its('stderr') { should_not match(/dubious ownership|unsafe repository/) }
+      end
     end
 
     # The ports OpenSSL reads /usr/local/openssl/cert.pem, which ca_root_nss

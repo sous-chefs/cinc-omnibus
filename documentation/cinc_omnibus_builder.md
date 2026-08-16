@@ -32,6 +32,8 @@ The toolchain package is sourced from the Cinc Project's package mirror via the 
 | `ruby_docker_copy_patch_path` | String | `'/usr/local/share/ruby-docker-copy-patch.rb'` | Path for the Docker copy-file Ruby patch. |
 | `manage_ruby_docker_copy_patch` | true, false | `true` | Whether to write the Ruby Docker copy-file patch. No-op on non-Linux platforms. |
 | `manage_debian_arm_links` | true, false | `true` | Whether to create Debian ARM compatibility links on Debian versions older than 12. |
+| `git_safe_directories` | Array | `["<build_user_home>/builds/*"]` (empty on Windows) | Paths written as `safe.directory` entries in the managed `.gitconfig`, so git accepts the runner's checkout when the build step runs it under `sudo`. A trailing `/*` matches at any depth and needs git 2.46 or newer. |
+| `manage_root_gitconfig` | true, false | `true` | macOS only. Whether to write the same `.gitconfig` to `/var/root` as well as the build user's home. |
 | `extra_environment` | Hash | `{}` | Additional environment variables for the toolchain load shim (`load-omnibus-toolchain.sh` on Unix, `load-omnibus-toolchain.ps1` on Windows). Values may be strings or arrays. |
 | `remove_packages` | true, false | `false` | Whether `:remove` should remove configured packages. |
 | `manage_msys2` | true, false | `true` | Windows only. Whether to install and manage MSYS2 via the `cinc_omnibus_msys2` resource. |
@@ -59,6 +61,15 @@ The toolchain package is sourced from the Cinc Project's package mirror via the 
   (`/opt/homebrew`) isn't on the default omnibus PATH. Because the build user's primary group is
   set to `omnibus`, it also keeps the user in the `com.apple.access_ssh` group so SSH logins keep
   working when Remote Login is limited to specific users.
+
+  Apple Silicon also gets `/usr/local/bin/git` → Homebrew's `git`, for the same PATH reason.
+  Builds run `sudo -E bundle exec omnibus build`, so git runs as root over a checkout the build
+  user owns and refuses it unless the path is a `safe.directory`. Apple's `/usr/bin/git` (2.32.1)
+  is too old to honor either the `safe.directory` values that survive a runner re-registration
+  (only exact paths work — not `*`, not a trailing `/*`) or the `SUDO_UID` bypass git 2.36 added
+  for exactly this case, so Intel — which reaches Homebrew's git through `/usr/local/bin` for
+  free — worked while Apple Silicon silently produced `0.0.0` packages. Without a git new enough
+  for it, `git describe` fails and omnibus falls back to that version.
 * **FreeBSD:** installs `pkg` prerequisites and the `omnibus-toolchain` self-extracting `.sh`. Also
   links `/usr/local/openssl/cert.pem` → `/usr/local/share/certs/ca-root-nss.crt`: the ports OpenSSL
   compiles in `/usr/local/openssl` as its `OPENSSLDIR`, but `ca_root_nss` only populates

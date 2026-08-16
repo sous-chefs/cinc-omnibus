@@ -56,7 +56,17 @@ On FreeBSD the cookbook links `/usr/local/openssl/cert.pem` (the ports OpenSSL's
 On macOS the cookbook also creates compatibility symlinks in `/usr/local/bin` so that the
 canonical autotools names resolve against Homebrew's renamed binaries: `libtoolize` →
 `glibtoolize` always, and on Apple Silicon also `pkg-config` → Homebrew's `pkg-config` shim
-(which lives outside `/usr/local/bin` when Homebrew is in `/opt/homebrew`).
+(which lives outside `/usr/local/bin` when Homebrew is in `/opt/homebrew`), plus `git` for the
+same reason.
+
+That `git` link is load-bearing, not cosmetic. Builds run `sudo -E bundle exec omnibus build`, so
+git runs as root over a build-user-owned checkout and rejects it unless the path is a
+`safe.directory`. The cookbook writes those entries into the managed `.gitconfig` (build user, and
+root's on macOS) as `<build_user_home>/builds/*`, which keeps the runner-specific token out of the
+value — but a trailing `/*` needs git 2.46+, and Apple's `/usr/bin/git` is 2.32.1, old enough to
+predate both that and the `SUDO_UID` bypass git 2.36 added. Intel picks up Homebrew's git from
+`/usr/local/bin` by accident of the prefix; Apple Silicon needs the link, and without it `git
+describe` fails and packages version as `0.0.0` without failing the job.
 
 ## GitLab Runner
 

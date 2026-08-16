@@ -226,6 +226,20 @@ module CincOmnibus
         '/usr/local/libexec/ccache'
       end
 
+      # The runner checks out under <build user home>/builds/<runner token>/...,
+      # and the build step runs it through sudo, so root's git has to accept a
+      # checkout the build user owns. The trailing /* matches at any depth, which
+      # keeps the runner-specific token out of the value. Empty on Windows: there
+      # is no sudo step, and a drive letter would need escaping in git config.
+      def default_git_safe_directories(home = default_build_user_home)
+        windows? ? [] : [::File.join(home, 'builds', '*')]
+      end
+
+      # macOS keeps root's home outside /Users.
+      def mac_root_home
+        '/var/root'
+      end
+
       # The load-shim variables and patch content helpers below back files
       # dropped by the builder action; they reference new_resource, so are only
       # valid in action context.

@@ -20,3 +20,13 @@
   autosetuprebase = always
 [pull]
   rebase = preserve
+<% unless @safe_directories.empty? -%>
+[safe]
+  ; The build step runs `sudo -E`, so git reads this as root over a checkout
+  ; the build user owns and would otherwise refuse it, leaving `git describe`
+  ; to fail and omnibus to version the package 0.0.0. A trailing /* matches at
+  ; any depth (git 2.46+) and keeps the runner's token out of the path.
+<% @safe_directories.each do |dir| -%>
+  directory = <%= dir %>
+<% end -%>
+<% end -%>
