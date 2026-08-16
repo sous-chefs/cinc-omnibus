@@ -203,10 +203,16 @@ describe 'cinc_omnibus_builder' do
     end
 
     it { expect { chef_run }.to_not raise_error }
-    %w(autoconf automake ca_root_nss gcc git libffi libtool libyaml openssl pkgconf readline).each do |pkg|
+    %w(autoconf automake ca_root_nss ccache gcc git libffi libtool libyaml openssl pkgconf readline).each do |pkg|
       it { is_expected.to install_package(pkg) }
     end
     it { is_expected.to create_template('/home/omnibus/load-omnibus-toolchain.sh') }
+
+    it 'puts the ccache wrappers ahead of the real compilers on PATH' do
+      expect(chef_run).to render_file('/home/omnibus/load-omnibus-toolchain.sh')
+        .with_content(%r{^export PATH="/usr/local/libexec/ccache:/opt/omnibus-toolchain/bin:/usr/local/bin:\$PATH"$})
+    end
+
     it { is_expected.to_not create_file('/usr/local/share/ruby-docker-copy-patch.rb') }
     it { is_expected.to create_directory('/usr/local/openssl') }
     it { is_expected.to create_link('/usr/local/openssl/cert.pem').with(to: '/usr/local/share/certs/ca-root-nss.crt') }

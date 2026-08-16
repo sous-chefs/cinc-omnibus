@@ -61,6 +61,9 @@ action_class do
       env['BASH_ENV'] = [windows_safe_path_join(windows_msys2_install_dir, 'etc', 'bash.bashrc')]
     else
       env['PATH'] = [::File.join(install_dir, 'bin'), '/usr/local/bin']
+      # ccache's compiler wrappers live in their own dir and only take effect
+      # when it precedes the real compilers on PATH, as ports' bsd.ccache.mk does.
+      env['PATH'].unshift(freebsd_ccache_wrapper_dir) if freebsd?
     end
 
     new_resource.extra_environment.each do |key, value|

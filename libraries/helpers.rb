@@ -140,6 +140,7 @@ module CincOmnibus
             automake
             bash
             ca_root_nss
+            ccache
             gcc
             git
             libffi
@@ -217,6 +218,12 @@ module CincOmnibus
 
       def omnibus_env
         node.run_state[:omnibus_env] ||= Hash.new { |hash, key| hash[key] = [] }
+      end
+
+      # Where the ccache port drops its cc/gcc/c++ symlinks: ports' bsd.ccache.mk
+      # uses ${LOCALBASE}/libexec/ccache, and LOCALBASE is /usr/local.
+      def freebsd_ccache_wrapper_dir
+        '/usr/local/libexec/ccache'
       end
 
       # The load-shim variables and patch content helpers below back files
