@@ -3,8 +3,8 @@
 One-shot scripts that turn a fresh node into a Cinc Omnibus build host. They install Cinc Client
 via the Cinc omnitruck, download `cinc-omnibus` + `chef-ingredient` from GitHub, converge the
 `cinc_omnibus_builder` resource against the local node, then uninstall Cinc Client and remove
-the scratch workspace. The toolchain itself (`/opt/omnibus-toolchain` or
-`C:\cinc-project\omnibus-toolchain`) stays installed — that's the point.
+the scratch workspace. What the resource set up stays: the toolchain (`/opt/omnibus-toolchain`) on
+Unix-likes, and Docker plus the GitLab Runner service on a Windows host — that's the point.
 
 ## Layout
 
@@ -44,17 +44,25 @@ platforms — no bash required to launch it. The Cinc omnitruck install step doe
 `bash`, so on FreeBSD the script does `pkg install -y bash` as a prerequisite (macOS ships bash;
 all Linux distros ship bash).
 
-### Windows (Server 2016+)
+### Windows (Server 2022+, Docker host)
 
 ```powershell
 [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12
 . { Invoke-WebRequest -UseBasicParsing -Uri https://raw.githubusercontent.com/sous-chefs/cinc-omnibus/main/bootstrap/install.ps1 } | Invoke-Expression
 ```
 
-> On Windows Server 2016 / Windows PowerShell 5.1, the `SecurityProtocol` line is required: the
-> default .NET protocols can omit TLS 1.2, which GitHub requires, and the download fails with
-> *"Could not create SSL/TLS secure channel."* The script sets TLS 1.2 internally for its own
-> subsequent calls, but this first fetch happens before the script runs.
+> On Windows PowerShell 5.1, the `SecurityProtocol` line is required: the default .NET protocols
+> can omit TLS 1.2, which GitHub requires, and the download fails with *"Could not create SSL/TLS
+> secure channel."* The script sets TLS 1.2 internally for its own subsequent calls, but this first
+> fetch happens before the script runs.
+
+On Windows the converge prepares a **Docker host** for the `cincproject/omnibus-windows` image
+rather than a builder: it installs the Containers feature, configures Defender, installs
+`docker-engine` and the GitLab Runner service. Expect the first run to end with a **reboot
+request** (the Containers feature needs one before Docker can start). Chef reboots the host as it
+exits, so the Cinc Client cleanup below happens on the second run: run the script again after the
+reboot to finish. Hyper-V must not be installed. Afterwards register the two runners by hand (see
+[`cinc_omnibus_gitlab_runner`](../documentation/cinc_omnibus_gitlab_runner.md)).
 
 ## Environment overrides
 
@@ -88,7 +96,7 @@ $env:REPO_BRANCH = 'feat/cinc-toolchain-migration'
    `C:\cinc\cookbooks` on Windows) alongside the local wrapper cookbook.
 4. Runs `cinc-client --local-mode` with the wrapper cookbook in the run_list. The wrapper invokes
    `cinc_omnibus_builder 'default'`, which installs build deps, the omnibus toolchain, the build
-   user, and the load shim.
+   user, and the load shim (on Windows: the Docker host and the GitLab Runner service).
 5. Uninstalls Cinc Client and removes the scratch workspace. The build node no longer needs Cinc
    to run omnibus builds — those use `omnibus-toolchain`'s own Ruby.
 

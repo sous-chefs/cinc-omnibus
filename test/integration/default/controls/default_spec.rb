@@ -4,12 +4,13 @@ os_version = os.release
 os_name = os.name
 unix_path = '/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin'
 
+# Windows builders are Docker hosts (the toolchain lives in the
+# cincproject/omnibus-windows image), so none of these apply there.
 case os.family
 when 'windows'
-  install_dir = 'C:\cinc-project\omnibus-toolchain'
-  build_user_home = 'C:\omnibus'
-  shim_name = 'load-omnibus-toolchain.ps1'
-  # DisplayName is versioned, so query the uninstall registry with a wildcard.
+  install_dir = nil
+  build_user_home = nil
+  shim_name = nil
   toolchain_pkg = nil
 when 'darwin'
   install_dir = '/opt/omnibus-toolchain'
@@ -199,33 +200,44 @@ control 'default' do
   end
 
   if os.windows?
-    describe powershell(<<~PS) do
-      $entry = Get-ChildItem 'HKLM:\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall' |
-        ForEach-Object { Get-ItemProperty $_.PSPath } |
-        Where-Object { $_.DisplayName -like 'Omnibus Toolchain*' } |
-        Select-Object -First 1
-      if (-not $entry) { exit 1 } else { Write-Output $entry.DisplayName }
-    PS
+    # Process isolation needs the Containers feature and no hypervisor.
+    describe powershell('(Get-WindowsFeature -Name Containers).Installed') do
+      its('stdout') { should match(/True/) }
+    end
+
+    describe powershell('[bool]((Get-WindowsFeature -Name Hyper-V -ErrorAction SilentlyContinue).Installed)') do
+      its('stdout') { should match(/False/) }
+    end
+
+    describe service('docker') do
+      it { should be_installed }
+      it { should be_enabled }
+      it { should be_running }
+    end
+
+    describe command("docker version --format '{{.Server.Os}}/{{.Server.Arch}}'") do
       its('exit_status') { should eq 0 }
-      its('stdout') { should match(/^Omnibus Toolchain/) }
+      its('stdout') { should match(%r{^windows/amd64}) }
     end
 
-    describe file install_dir do
-      it { should be_directory }
+    describe command("docker info --format '{{.Isolation}}'") do
+      its('stdout') { should match(/^process/) }
     end
 
-    describe file "#{build_user_home}\\#{shim_name}" do
-      it { should exist }
-    end
+    # Defender steps are skipped once the feature is removed, and
+    # Set-MpPreference is a silent no-op under Tamper Protection.
+    if powershell('[bool](Get-Command Get-MpPreference -ErrorAction SilentlyContinue)').stdout.strip == 'True'
+      describe powershell('(Get-MpPreference).ExclusionPath -join ";"') do
+        its('stdout') { should match(/C:\\ProgramData\\docker/i) }
+        its('stdout') { should match(/C:\\Program Files\\docker/i) }
+        its('stdout') { should match(/C:\\GitLab-Runner/i) }
+      end
 
-    describe powershell("& \"#{install_dir}\\embedded\\bin\\ruby.exe\" --version") do
-      its('exit_status') { should eq 0 }
-      its('stdout') { should match(/^ruby \d/) }
-    end
-
-    describe powershell(". \"#{build_user_home}\\#{shim_name}\"") do
-      its('exit_status') { should eq 0 }
-      its('stdout') { should match(/Tool Versions/) }
+      unless powershell('[bool](Get-MpComputerStatus).IsTamperProtected').stdout.strip == 'True'
+        describe powershell('(Get-MpPreference).DisableRealtimeMonitoring') do
+          its('stdout') { should match(/True/) }
+        end
+      end
     end
   else
     # Darwin: InSpec's package resource queries Homebrew, so check the pkgutil
@@ -399,12 +411,9 @@ end
 control 'load-shim-output' do
   impact 0.0
   title 'Echo load-omnibus-toolchain shim output for manual review'
+  only_if('no load shim on a Windows Docker host') { !os.windows? }
 
-  shim_cmd = if os.windows?
-               powershell(". \"#{build_user_home}\\#{shim_name}\"")
-             else
-               command("#{build_user_home}/#{shim_name}")
-             end
+  shim_cmd = command("#{build_user_home}/#{shim_name}")
 
   shim_cmd.stdout.each_line do |line|
     next if line.strip.empty?

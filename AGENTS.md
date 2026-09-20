@@ -39,6 +39,10 @@ Supported platforms and architectures track the build matrix of the upstream Cin
 Cross-architecture coverage (aarch64, ppc64le, s390x, riscv64) is exercised by the toolchain
 project's CI; the cookbook's Kitchen suites stay x86_64-only.
 
+The GitHub Actions Windows image already ships Docker (installed by Microsoft's
+`install-docker-ce.ps1`, not Chocolatey) with the Containers feature enabled, so the exec suite
+exercises the adopt-existing-docker path and never triggers the feature-install reboot.
+
 ## Build dependencies installed
 
 | Platform Family | Source |
@@ -48,7 +52,22 @@ project's CI; the cookbook's Kitchen suites stay x86_64-only.
 | SUSE | Distribution packages + `omnibus-toolchain` |
 | macOS | Homebrew formulae + `omnibus-toolchain` `.pkg` |
 | FreeBSD | `pkg` packages + `omnibus-toolchain` self-extracting `.sh` |
-| Windows | `omnibus-toolchain` `.msi` (build deps live in the runner image) |
+| Windows | None on the host: the `cincproject/omnibus-windows` image carries MSYS2, the toolchain and the build tools |
+
+## Windows: Docker host, not builder
+
+Since 5.0 the Windows arm of `cinc_omnibus_builder` prepares a Windows Server 2022+ **Docker host**
+through `cinc_omnibus_docker_host` (documentation/cinc_omnibus_docker_host.md): Containers feature
+(reboot requested at end of run), Hyper-V must be absent (process isolation), Defender exclusions +
+real-time off (feature removal opt-in), Chocolatey `docker-engine`, `daemon.json` only when
+`docker_data_root`/`docker_daemon_config` are set. The pet-builder path (`cinc_omnibus_msys2`, the
+choco build tools, the toolchain MSI, `load-omnibus-toolchain.ps1`) was removed; its equivalent is
+the Dockerfile in the docker-images repository (`omnibus-windows/`).
+
+Chef's `windows_defender` resource maps `realtime_protection` to `DisableIOAVProtection` (not
+`DisableRealtimeMonitoring`) and `windows_defender_exclusion` does not quote paths with spaces, so
+the resource calls `Set-MpPreference`/`Add-MpPreference` directly. Tamper Protection silently
+ignores `Set-MpPreference`; the resource warns and skips rather than re-running every converge.
 
 On FreeBSD the cookbook links `/usr/local/openssl/cert.pem` (the ports OpenSSL's `OPENSSLDIR`, which
 `ca_root_nss` leaves empty) to the `ca_root_nss` bundle, so RVM-built rubies can verify TLS.
@@ -73,7 +92,10 @@ describe` fails and packages version as `0.0.0` without failing the job.
 On non-Linux builders (macOS, FreeBSD, Windows) the cookbook installs and manages the GitLab Runner
 via [`cinc_omnibus_gitlab_runner`](documentation/cinc_omnibus_gitlab_runner.md) (`manage_gitlab_runner`,
 default true). It never runs `gitlab-runner register` — registration stays manual. On Linux it is a
-no-op, since Linux omnibus builds run in Docker and the runner lives on the Docker host.
+no-op, since Linux omnibus builds run in Docker and the runner lives on the Docker host. On Windows
+the service runs as LocalSystem (which the docker named pipe grants by default) and serves two
+hand-registered runners: a `shell` one that builds the image and a `docker-windows` one for product
+builds.
 
 On macOS the runner's omnibus `.dmg` step drives Finder via AppleScript, which needs the TCC
 *Automation* permission. Because Homebrew's `gitlab-runner` is ad-hoc signed and its identity changes
@@ -92,3 +114,5 @@ This cookbook prepares a build host; it does not compile Cinc or Omnibus project
   not build a full Cinc artifact.
 * The resource writes `/usr/local/share/ruby-docker-copy-patch.rb` on Linux to preserve the
   copy-file syscall workaround for Linux kernels 5.6–5.10 (no-op on macOS/FreeBSD/Windows).
+* On Windows, Defender path exclusions do not reach a running container's writable layer (a mounted
+  VHDX); `defender_process_exclusions` or `remove_defender` are the levers, neither measured yet.
