@@ -26,17 +26,26 @@ property :git_safe_directories, Array, default: lazy { default_git_safe_director
 property :manage_root_gitconfig, [true, false], default: true
 property :extra_environment, Hash, default: {}
 property :remove_packages, [true, false], default: false
-property :manage_msys2, [true, false], default: true
-property :msys2_packages, Array, default: lazy { msys2_default_packages }
-property :msys2_ignore_packages, Array, default: lazy { msys2_default_ignore_packages }
-property :msys2_pinned_packages, Array, default: []
-property :msys2_base_archive_date, String, default: lazy { msys2_latest_base_archive_date }
-property :msys2_verify_signature, [true, false], default: true
 property :manage_gitlab_runner, [true, false], default: true
 property :manage_gitlab_runner_service, [true, false], default: true
 property :manage_gitlab_runner_signing, [true, false], default: true
 property :manage_gitlab_runner_sudoers, [true, false], default: true
 property :gitlab_runner_version, [String, nil]
+# Windows only: the host runs the builds in containers, so it is prepared as a
+# Docker host (cinc_omnibus_docker_host) instead of getting the build tools.
+property :manage_docker_host, [true, false], default: true
+property :docker_engine_version, [String, nil]
+property :docker_data_root, [String, nil]
+property :docker_daemon_config, Hash, default: {}
+property :containers_feature_source, [String, nil]
+property :reboot_after_feature_install, [true, false], default: true
+property :allow_hyperv, [true, false], default: false
+property :manage_defender, [true, false], default: true
+property :defender_exclusions, Array,
+         default: lazy { windows_docker_defender_exclusions(docker_data_root) + [gitlab_runner_windows_install_dir] }
+property :defender_process_exclusions, Array, default: []
+property :disable_defender_realtime, [true, false], default: true
+property :remove_defender, [true, false], default: false
 
 default_action :create
 
@@ -48,25 +57,13 @@ action_class do
 
     env = {
       'OMNIBUS_TOOLCHAIN_INSTALL_DIR' => [install_dir],
-      'SSL_CERT_FILE' => [windows_safe_path_join(install_dir, 'embedded', 'ssl', 'certs', 'cacert.pem')],
+      'SSL_CERT_FILE' => [::File.join(install_dir, 'embedded', 'ssl', 'certs', 'cacert.pem')],
+      'PATH' => [::File.join(install_dir, 'bin'), '/usr/local/bin'],
     }
 
-    if windows?
-      # A fresh box has no build tools on PATH, so the shim prepends them.
-      # HOMEDRIVE/HOMEPATH point Ruby/Git at the build user's home.
-      env['PATH'] = windows_path_entries(install_dir)
-      env['HOMEDRIVE'] = [windows_system_drive]
-      env['HOMEPATH'] = [new_resource.build_user_home.sub(/\A[A-Za-z]:/, '')]
-      env['MSYS2_INSTALL_DIR'] = [windows_msys2_install_dir]
-      env['MSYSTEM'] = ['UCRT64']
-      env['OMNIBUS_WINDOWS_ARCH'] = ['x64']
-      env['BASH_ENV'] = [windows_safe_path_join(windows_msys2_install_dir, 'etc', 'bash.bashrc')]
-    else
-      env['PATH'] = [::File.join(install_dir, 'bin'), '/usr/local/bin']
-      # ccache's compiler wrappers live in their own dir and only take effect
-      # when it precedes the real compilers on PATH, as ports' bsd.ccache.mk does.
-      env['PATH'].unshift(freebsd_ccache_wrapper_dir) if freebsd?
-    end
+    # ccache's compiler wrappers live in their own dir and only take effect
+    # when it precedes the real compilers on PATH, as ports' bsd.ccache.mk does.
+    env['PATH'].unshift(freebsd_ccache_wrapper_dir) if freebsd?
 
     new_resource.extra_environment.each do |key, value|
       env[key] = Array(value)
@@ -77,6 +74,36 @@ action_class do
 end
 
 action :create do
+  # Windows builds run in the cincproject/omnibus-windows image, which carries
+  # the toolchain, MSYS2 and the build tools; the host only needs Docker and a
+  # runner with the docker-windows executor.
+  if windows?
+    if new_resource.manage_docker_host
+      cinc_omnibus_docker_host new_resource.instance_name do
+        docker_engine_version new_resource.docker_engine_version
+        docker_data_root new_resource.docker_data_root
+        docker_daemon_config new_resource.docker_daemon_config
+        containers_feature_source new_resource.containers_feature_source
+        reboot_after_feature_install new_resource.reboot_after_feature_install
+        allow_hyperv new_resource.allow_hyperv
+        manage_defender new_resource.manage_defender
+        defender_exclusions new_resource.defender_exclusions
+        defender_process_exclusions new_resource.defender_process_exclusions
+        disable_defender_realtime new_resource.disable_defender_realtime
+        remove_defender new_resource.remove_defender
+      end
+    end
+
+    if new_resource.manage_gitlab_runner
+      cinc_omnibus_gitlab_runner new_resource.instance_name do
+        version new_resource.gitlab_runner_version
+        manage_service new_resource.manage_gitlab_runner_service
+      end
+    end
+
+    next
+  end
+
   # Bootstrap the FreeBSD pkg catalog: freebsd_package's `pkg rquery` returns
   # no candidate until the catalog is fetched. `creates` keeps it idempotent.
   execute 'pkg update' do
@@ -86,13 +113,7 @@ action :create do
   end
 
   if new_resource.packages
-    if windows?
-      # Build tools via chocolatey; MSYS2 (needs pacman) is handled by
-      # cinc_omnibus_msys2 below.
-      chocolatey_installer 'install'
-
-      new_resource.packages.each { |p| chocolatey_package p }
-    elsif freebsd?
+    if freebsd?
       # Work around a freebsd_pkgng multipackage bug (only the first name gets
       # a candidate version); install one at a time.
       new_resource.packages.each { |p| package p }
@@ -110,17 +131,7 @@ action :create do
     end
   end
 
-  if windows? && new_resource.manage_msys2
-    cinc_omnibus_msys2 new_resource.instance_name do
-      packages new_resource.msys2_packages
-      ignore_packages new_resource.msys2_ignore_packages
-      pinned_packages new_resource.msys2_pinned_packages
-      base_archive_date new_resource.msys2_base_archive_date
-      verify_signature new_resource.msys2_verify_signature
-    end
-  end
-
-  build_essential 'cinc-omnibus' unless windows?
+  build_essential 'cinc-omnibus'
 
   package new_resource.unsafe_packages do
     action :remove
@@ -135,7 +146,7 @@ action :create do
     architecture new_resource.toolchain_architecture
     platform 'sles' if platform?('opensuseleap')
     platform_version_compatibility_mode true
-    action(windows? ? :install : :upgrade)
+    action :upgrade
   end
 
   new_resource.pkgconfig_files.each do |pkgconfig_file|
@@ -145,37 +156,31 @@ action :create do
     end
   end
 
-  unless windows?
-    group new_resource.build_group do
-      append true
-    end
+  group new_resource.build_group do
+    append true
+  end
 
-    # Declare the build user's existing SecureToken state (macOS only) so the
-    # mac_user provider doesn't try to toggle it, which would need admin creds.
-    # Computed here, not in the block: sub-resource blocks can't see our helpers.
-    build_user_secure_token = mac_build_user_secure_token?(new_resource.build_user)
+  # Declare the build user's existing SecureToken state (macOS only) so the
+  # mac_user provider doesn't try to toggle it, which would need admin creds.
+  # Computed here, not in the block: sub-resource blocks can't see our helpers.
+  build_user_secure_token = mac_build_user_secure_token?(new_resource.build_user)
 
-    user new_resource.build_user do
-      home new_resource.build_user_home
-      group new_resource.build_group
-      shell new_resource.build_user_shell
-      secure_token build_user_secure_token if mac_os_x?
-    end
+  user new_resource.build_user do
+    home new_resource.build_user_home
+    group new_resource.build_group
+    shell new_resource.build_user_shell
+    secure_token build_user_secure_token if mac_os_x?
   end
 
   directory new_resource.build_user_home do
-    unless windows?
-      owner new_resource.build_user
-      group new_resource.build_group
-    end
+    owner new_resource.build_user
+    group new_resource.build_group
   end
 
   directory new_resource.cache_dir do
     recursive true
-    unless windows?
-      owner new_resource.build_user
-      group new_resource.build_group
-    end
+    owner new_resource.build_user
+    group new_resource.build_group
   end
 
   directory Chef::Config[:file_cache_path] do
@@ -190,11 +195,9 @@ action :create do
     source 'gitconfig.erb'
     cookbook 'cinc-omnibus' # not the wrapper that declares the resource
     variables gitconfig_variables
-    unless windows?
-      owner new_resource.build_user
-      group new_resource.build_group
-      mode '0644'
-    end
+    owner new_resource.build_user
+    group new_resource.build_group
+    mode '0644'
   end
 
   # The macOS build step runs `sudo -E`, which today keeps HOME pointed at the
@@ -211,21 +214,13 @@ action :create do
     end
   end
 
-  if windows?
-    template ::File.join(new_resource.build_user_home, 'load-omnibus-toolchain.ps1') do
-      source 'load-omnibus-toolchain.ps1.erb'
-      cookbook 'cinc-omnibus' # not the wrapper that declares the resource
-      variables omnibus_toolchain_ps1_variables(env)
-    end
-  else
-    template ::File.join(new_resource.build_user_home, 'load-omnibus-toolchain.sh') do
-      source 'load-omnibus-toolchain.sh.erb'
-      cookbook 'cinc-omnibus' # not the wrapper that declares the resource
-      variables omnibus_toolchain_sh_variables(env)
-      owner new_resource.build_user
-      group new_resource.build_group
-      mode '0755'
-    end
+  template ::File.join(new_resource.build_user_home, 'load-omnibus-toolchain.sh') do
+    source 'load-omnibus-toolchain.sh.erb'
+    cookbook 'cinc-omnibus' # not the wrapper that declares the resource
+    variables omnibus_toolchain_sh_variables(env)
+    owner new_resource.build_user
+    group new_resource.build_group
+    mode '0755'
   end
 
   if new_resource.manage_ruby_docker_copy_patch && linux?
@@ -313,6 +308,31 @@ action :create do
 end
 
 action :remove do
+  if windows?
+    if new_resource.manage_docker_host
+      cinc_omnibus_docker_host new_resource.instance_name do
+        docker_data_root new_resource.docker_data_root
+        manage_defender new_resource.manage_defender
+        defender_exclusions new_resource.defender_exclusions
+        defender_process_exclusions new_resource.defender_process_exclusions
+        disable_defender_realtime new_resource.disable_defender_realtime
+        remove_defender new_resource.remove_defender
+        remove_package new_resource.remove_packages
+        action :remove
+      end
+    end
+
+    if new_resource.manage_gitlab_runner
+      cinc_omnibus_gitlab_runner new_resource.instance_name do
+        manage_service new_resource.manage_gitlab_runner_service
+        remove_package new_resource.remove_packages
+        action :remove
+      end
+    end
+
+    next
+  end
+
   new_resource.pkgconfig_files.each do |pkgconfig_file|
     file pkgconfig_file do
       action :delete
@@ -327,14 +347,8 @@ action :remove do
     action :delete
   end if mac_os_x? && new_resource.manage_root_gitconfig
 
-  if windows?
-    file ::File.join(new_resource.build_user_home, 'load-omnibus-toolchain.ps1') do
-      action :delete
-    end
-  else
-    file ::File.join(new_resource.build_user_home, 'load-omnibus-toolchain.sh') do
-      action :delete
-    end
+  file ::File.join(new_resource.build_user_home, 'load-omnibus-toolchain.sh') do
+    action :delete
   end
 
   if linux?
@@ -351,12 +365,6 @@ action :remove do
   package new_resource.packages do
     action :remove
   end if new_resource.remove_packages && new_resource.packages
-
-  if windows? && new_resource.manage_msys2 && new_resource.remove_packages
-    cinc_omnibus_msys2 new_resource.instance_name do
-      action :remove
-    end
-  end
 
   if new_resource.manage_gitlab_runner && !linux?
     cinc_omnibus_gitlab_runner new_resource.instance_name do

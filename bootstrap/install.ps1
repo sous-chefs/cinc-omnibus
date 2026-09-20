@@ -45,8 +45,8 @@ Copy-Item "$Work\cookbooks\cinc-omnibus\bootstrap\runlist\builder.json" "$Work\d
   --json-attributes "$Work\dna.json" `
   --chef-zero-port 8889
 
-# Uninstall cinc-client via its MSI and wipe the scratch dir; the toolchain
-# at C:\cinc-project\omnibus-toolchain is left untouched.
+# Uninstall cinc-client via its MSI and wipe the scratch dir; Docker and the
+# GitLab Runner service the converge set up are left untouched.
 $cinc = Get-ChildItem 'HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall' |
   ForEach-Object { Get-ItemProperty $_.PSPath } |
   Where-Object { $_.DisplayName -like 'Cinc Client*' } |

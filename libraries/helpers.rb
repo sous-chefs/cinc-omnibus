@@ -150,14 +150,6 @@ module CincOmnibus
             pkgconf
             readline
           )
-        when 'windows'
-          # Via chocolatey_package; MSYS2 (needs pacman) goes through cinc_omnibus_msys2.
-          %w(
-            7zip
-            git
-            windows-sdk-8.1
-            wixtoolset
-          )
         end
       end
 
@@ -229,10 +221,9 @@ module CincOmnibus
       # The runner checks out under <build user home>/builds/<runner token>/...,
       # and the build step runs it through sudo, so root's git has to accept a
       # checkout the build user owns. The trailing /* matches at any depth, which
-      # keeps the runner-specific token out of the value. Empty on Windows: there
-      # is no sudo step, and a drive letter would need escaping in git config.
+      # keeps the runner-specific token out of the value.
       def default_git_safe_directories(home = default_build_user_home)
-        windows? ? [] : [::File.join(home, 'builds', '*')]
+        [::File.join(home, 'builds', '*')]
       end
 
       # macOS keeps root's home outside /Users.
@@ -244,9 +235,9 @@ module CincOmnibus
       # dropped by the builder action; they reference new_resource, so are only
       # valid in action context.
 
-      # Template variables for the non-Windows load-omnibus-toolchain.sh shim.
-      # Berkshelf and Java are Linux-only, so the template omits those version
-      # checks on macOS/FreeBSD.
+      # Template variables for the load-omnibus-toolchain.sh shim. Berkshelf and
+      # Java are Linux-only, so the template omits those version checks on
+      # macOS/FreeBSD.
       def omnibus_toolchain_sh_variables(env)
         {
           install_dir: new_resource.toolchain_install_dir,
@@ -255,17 +246,6 @@ module CincOmnibus
                       .map { |key, value| "export #{key}=#{value.first}" }
                       .join("\n"),
           linux: linux?,
-        }
-      end
-
-      # Template variables for the Windows load-omnibus-toolchain.ps1 shim. The
-      # Windows PATH separator is ';'; File::PATH_SEPARATOR is ':' on the host.
-      def omnibus_toolchain_ps1_variables(env)
-        {
-          path: env.fetch('PATH').uniq.join(';'),
-          exports: env.reject { |key, _value| key == 'PATH' }
-                      .map { |key, value| "$env:#{key}='#{value.first}'" }
-                      .join("\n"),
         }
       end
 
@@ -295,151 +275,11 @@ module CincOmnibus
       end
 
       def default_toolchain_install_dir
-        if windows?
-          windows_safe_path_join(windows_system_drive, 'cinc-project', 'omnibus-toolchain')
-        else
-          '/opt/omnibus-toolchain'
-        end
+        '/opt/omnibus-toolchain'
       end
 
-      def windows_msys2_install_dir
-        windows_safe_path_join(windows_system_drive, 'msys64')
-      end
-
-      # We source a dated archive (not "latest"): only dated mirror files carry
-      # a GPG .sig, and the base has no gcc so the date pins only the runtime.
-
-      # Fallback when the mirror listing can't be fetched/parsed.
-      def msys2_fallback_base_archive_date
-        '20260611'
-      end
-
-      # Newest dated base archive found by scanning the mirror listing.
-      def msys2_latest_base_archive_date
-        require 'chef/http/simple'
-        body = Chef::HTTP::Simple.new('https://repo.msys2.org').get('/distrib/x86_64/')
-        dates = body.scan(/msys2-base-x86_64-(\d{8})\.sfx\.exe/).flatten
-        dates.max || msys2_fallback_base_archive_date
-      rescue StandardError
-        msys2_fallback_base_archive_date
-      end
-
-      # The .sfx.exe self-extracts (it carries its own zstd decoder), avoiding
-      # the need for an external extractor; it also has a GPG .sig.
-      def msys2_default_base_archive_url(date = msys2_latest_base_archive_date)
-        "https://repo.msys2.org/distrib/x86_64/msys2-base-x86_64-#{date}.sfx.exe"
-      end
-
-      # MSYS2 maintainer (Christoph Reiter) who signs the base archives; key
-      # vendored at files/default/msys2-signing-key.asc. The sig is the only
-      # integrity check (no checksum is published).
-      def msys2_signing_key_fingerprint
-        '0EBF782C5D53F7E5FB02A66746BD761F7A49B0EC'
-      end
-
-      # UCRT64 build deps mirroring the Linux omnibus_packages set (autotools etc.
-      # come from base-devel + the toolchain group; openjdk omitted, server-only).
-      def msys2_default_packages
-        %w(
-          base-devel
-          bzip2
-          ca-certificates
-          git
-          gnupg
-          mingw-w64-ucrt-x86_64-libffi
-          mingw-w64-ucrt-x86_64-ncurses
-          mingw-w64-ucrt-x86_64-openssl
-          mingw-w64-ucrt-x86_64-toolchain
-          mingw-w64-ucrt-x86_64-zlib
-          openssh
-          rsync
-          wget
-        )
-      end
-
-      # Frozen via pacman.conf IgnorePkg so `pacman -Syu` can't bump the compiler.
-      def msys2_default_ignore_packages
-        %w(
-          mingw-w64-ucrt-x86_64-binutils
-          mingw-w64-ucrt-x86_64-gcc
-          mingw-w64-ucrt-x86_64-gcc-libs
-        )
-      end
-
-      # The msys2_* helpers below back the cinc_omnibus_msys2 provider; they
-      # reference new_resource, so they are only valid in action context.
-
-      def msys2_bash_exe
-        windows_safe_path_join(new_resource.install_dir, 'usr', 'bin', 'bash.exe')
-      end
-
-      def msys2_pacman_conf
-        windows_safe_path_join(new_resource.install_dir, 'etc', 'pacman.conf')
-      end
-
-      def msys2_gpg_home
-        ::File.join(Chef::Config[:file_cache_path], 'msys2-gpg')
-      end
-
-      def msys2_signing_key_path
-        ::File.join(Chef::Config[:file_cache_path], 'msys2-signing-key.asc')
-      end
-
-      # Git for Windows' gpg is MSYS-built, so paths go through to_msys_path.
-      def msys2_gpg_cmd(args)
-        %("#{new_resource.gpg_path}" --homedir "#{to_msys_path(msys2_gpg_home)}" --batch #{args})
-      end
-
-      # Extract into install_dir's parent (the sfx unpacks a "msys64" folder).
-      # Forward slashes: a trailing backslash in -o"C:\" escapes the closing quote.
-      def msys2_extract_parent
-        "#{new_resource.install_dir.tr('\\', '/').sub(%r{/[^/]*\z}, '')}/"
-      end
-
-      # Run a command in an MSYS2 login shell (-l sources the profile for PATH).
-      def msys2_shell(command)
-        %("#{msys2_bash_exe}" -lc '#{command}')
-      end
-
-      def msys2_ignore_pkg_line
-        "IgnorePkg   = #{new_resource.ignore_packages.join(' ')}"
-      end
-
-      # True while a gpg-agent/dirmngr daemon is still running.
-      def msys2_gpg_daemons_running?
-        shell_out('tasklist /nh').stdout.match?(/gpg-agent\.exe|dirmngr\.exe/i)
-      end
-
-      # True when any mingw toolchain other than ucrt64 (msvcrt/i686/clang)
-      # is installed.
-      def msys2_foreign_toolchains_present?
-        shell_out(msys2_shell(%(pacman -Qq | grep -E "^mingw-w64-" | grep -qvE "^mingw-w64-ucrt-x86_64-"))).exitstatus.zero?
-      end
-
-      # Sentinel written after a successful post-provisioning rebase.
-      def msys2_rebased_sentinel
-        windows_safe_path_join(new_resource.install_dir, 'etc', '.cinc-rebased')
-      end
-
-      def msys2_rebased?
-        ::File.exist?(msys2_rebased_sentinel)
-      end
-
-      # PATH entries for the Windows load shim: tools the omnibus toolchain
-      # shells out to (WiX, 7-Zip, Windows SDK, Git, MSYS2) but doesn't add itself.
-      def windows_path_entries(install_dir = default_toolchain_install_dir)
-        drive = windows_system_drive
-        [
-          windows_safe_path_join(drive, 'Program Files (x86)', 'WiX Toolset v3.14', 'bin'),
-          windows_safe_path_join(drive, 'Program Files', '7-Zip'),
-          windows_safe_path_join(drive, 'Program Files (x86)', 'Windows Kits', '8.1', 'bin', 'x64'),
-          windows_safe_path_join(install_dir, 'embedded', 'bin'),
-          windows_safe_path_join(drive, 'Program Files', 'Git', 'cmd'),
-          windows_safe_path_join(windows_msys2_install_dir, 'ucrt64', 'bin'),
-          windows_safe_path_join(windows_msys2_install_dir, 'usr', 'bin'),
-        ]
-      end
-
+      # Windows-only paths (runner install dir, Docker dirs). Backslashes are
+      # only substituted on a Windows host, so the ChefSpec host keeps '/'.
       def windows_safe_path_join(*pieces)
         path = File.join(*pieces)
 
@@ -450,40 +290,97 @@ module CincOmnibus
         end
       end
 
-      # MSYS POSIX form for Git for Windows' gpg (C:\foo -> /c/foo). Paths
-      # without a drive letter (e.g. the ChefSpec host) are left unchanged.
-      def to_msys_path(path)
-        path.tr('\\', '/').sub(/\A([A-Za-z]):/) { "/#{Regexp.last_match(1).downcase}" }
-      end
-
       def default_build_user_home
-        if mac_os_x?
-          '/Users/omnibus'
-        elsif windows?
-          windows_safe_path_join(windows_system_drive, 'omnibus')
-        else
-          '/home/omnibus'
-        end
+        mac_os_x? ? '/Users/omnibus' : '/home/omnibus'
       end
 
       def windows_system_drive
         ENV['SYSTEMDRIVE'] || 'C:'
       end
 
+      def gitlab_runner_windows_install_dir
+        windows_safe_path_join(windows_system_drive, 'GitLab-Runner')
+      end
+
+      # Docker on the Windows host: image layers, container writable layers and
+      # daemon.json live under ProgramData; the choco docker-engine package (v23+)
+      # installs the binaries under Program Files.
+      def windows_docker_program_data
+        windows_safe_path_join(windows_system_drive, 'ProgramData', 'docker')
+      end
+
+      def windows_docker_daemon_config_path
+        windows_safe_path_join(windows_docker_program_data, 'config', 'daemon.json')
+      end
+
+      # Defender real-time scanning sat at 90% CPU during concurrent container
+      # builds; the layer dirs are what it chews on. A custom data-root is
+      # appended when set.
+      def windows_docker_defender_exclusions(data_root = nil)
+        [
+          windows_docker_program_data,
+          windows_safe_path_join(windows_system_drive, 'Program Files', 'docker'),
+          data_root,
+        ].compact
+      end
+
+      # PowerShell array literal of single-quoted strings.
+      def powershell_string_array(items)
+        "@(#{items.map { |item| "'#{item.to_s.gsub("'", "''")}'" }.join(', ')})"
+      end
+
+      # PowerShell statements that leave the entries of `items` missing from the
+      # Get-MpPreference list `flag` (ExclusionPath / ExclusionProcess) in
+      # $missing. -notcontains is case-insensitive, matching how Defender stores
+      # paths. Two statements, so callers append with ';' rather than assign.
+      def windows_defender_missing_exclusions(flag, items)
+        "$current = @((Get-MpPreference).#{flag}); " \
+        "$missing = @(#{powershell_string_array(items)} | Where-Object { $current -notcontains $_ })"
+      end
+
+      # The windows_* predicates below back the cinc_omnibus_docker_host guards;
+      # they shell out, so they are only valid in action context.
+
+      # Process isolation needs no hypervisor, and with Hyper-V present the
+      # Server Standard licence caps Hyper-V-isolated containers at two.
+      def windows_hyperv_installed?
+        powershell_exec!("(Get-WindowsFeature -Name Hyper-V -ErrorAction SilentlyContinue).InstallState -eq 'Installed'").result == true
+      end
+
+      # False once the Windows-Defender feature is removed (the Mp* cmdlets go
+      # with it) — every Defender step is guarded on this.
+      def windows_defender_present?
+        powershell_exec!('[bool](Get-Command Get-MpPreference -ErrorAction SilentlyContinue)').result == true
+      end
+
+      # Tamper Protection makes Set-MpPreference a silent no-op; it can only be
+      # turned off from the Windows Security UI or an MDM/Intune policy.
+      def windows_defender_tamper_protected?
+        powershell_exec!('[bool](Get-MpComputerStatus -ErrorAction SilentlyContinue).IsTamperProtected').result == true
+      end
+
+      # Chef's reboot_pending?: a reboot requested this run, or Windows'
+      # CBS/Windows Update/PendingFileRenameOperations markers.
+      def windows_reboot_pending?
+        reboot_pending?
+      end
+
+      # A docker service that chocolatey does not own (Microsoft's
+      # install-docker-ce.ps1, the GitHub Actions runner image): leave it alone
+      # rather than install a second engine over it.
+      def windows_docker_installed_outside_chocolatey?
+        powershell_exec!(<<~PS1).result == true
+          $choco = if ($env:ChocolateyInstall) { $env:ChocolateyInstall } else { Join-Path $env:ProgramData 'chocolatey' }
+          [bool](Get-Service -Name docker -ErrorAction SilentlyContinue) -and -not (Test-Path (Join-Path $choco 'lib\docker-engine'))
+        PS1
+      end
+
       def default_build_user_shell
-        if windows?
-          windows_safe_path_join(default_toolchain_install_dir, 'embedded', 'bin', 'usr', 'bin', 'bash')
-        else
-          ::File.join(default_toolchain_install_dir, 'bin', 'bash')
-        end
+        ::File.join(default_toolchain_install_dir, 'bin', 'bash')
       end
 
       def default_cache_dir
-        if windows?
-          windows_safe_path_join(windows_system_drive, 'omnibus', 'cache')
-        else
-          '/var/cache/omnibus'
-        end
+        '/var/cache/omnibus'
       end
 
       # macOS only. True when the build user already holds a SecureToken. We
@@ -644,8 +541,24 @@ module CincOmnibus
         ::File.exist?(new_resource.signing_keychain)
       end
 
+      # The binary the choco package drops with /InstallDir, and what the
+      # service must point at (not the shim on PATH).
+      def gitlab_runner_windows_exe
+        windows_safe_path_join(new_resource.windows_install_dir, 'gitlab-runner.exe')
+      end
+
+      def gitlab_runner_windows_service_path
+        powershell_out(%((Get-CimInstance Win32_Service -Filter "Name='gitlab-runner'").PathName)).stdout.strip
+      end
+
+      def gitlab_runner_windows_service_exists?
+        !gitlab_runner_windows_service_path.empty?
+      end
+
+      # Installed *and* registered against our binary; anything else (the
+      # choco shim, a moved install dir) gets reinstalled.
       def gitlab_runner_windows_service_installed?
-        !powershell_out('Get-Service -Name gitlab-runner -ErrorAction SilentlyContinue').stdout.strip.empty?
+        gitlab_runner_windows_service_path.downcase.include?(gitlab_runner_windows_exe.downcase)
       end
     end
   end
