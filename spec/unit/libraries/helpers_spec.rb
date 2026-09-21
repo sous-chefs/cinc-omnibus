@@ -6,21 +6,32 @@ require_relative '../../../libraries/helpers'
 RSpec.describe CincOmnibus::Cookbook::Helpers do
   subject(:helper) { Class.new { include CincOmnibus::Cookbook::Helpers }.new }
 
-  describe '#to_msys_path' do
-    it 'converts a Windows drive path to MSYS POSIX form' do
-      expect(helper.to_msys_path('C:\\Users\\vagrant\\cache')).to eq('/c/Users/vagrant/cache')
+  describe '#powershell_string_array' do
+    it 'single-quotes each item, escaping embedded quotes' do
+      expect(helper.powershell_string_array(['C:\Program Files\docker', "it's"]))
+        .to eq("@('C:\\Program Files\\docker', 'it''s')")
     end
 
-    it 'converts a mixed-separator drive path' do
-      expect(helper.to_msys_path('C:/Users/vagrant/cache')).to eq('/c/Users/vagrant/cache')
+    it 'renders an empty list' do
+      expect(helper.powershell_string_array([])).to eq('@()')
+    end
+  end
+
+  describe '#windows_defender_missing_exclusions' do
+    it 'filters the wanted entries against the current Get-MpPreference list' do
+      expect(helper.windows_defender_missing_exclusions('ExclusionProcess', %w(gcc.exe)))
+        .to eq("$current = @((Get-MpPreference).ExclusionProcess); $missing = @(@('gcc.exe') | Where-Object { $current -notcontains $_ })")
+    end
+  end
+
+  describe '#windows_docker_defender_exclusions' do
+    it 'covers the layer store and the choco install dir' do
+      expect(helper.windows_docker_defender_exclusions)
+        .to eq(['C:/ProgramData/docker', 'C:/Program Files/docker'])
     end
 
-    it 'lowercases the drive letter' do
-      expect(helper.to_msys_path('D:\\tools')).to eq('/d/tools')
-    end
-
-    it 'leaves a path without a drive letter unchanged' do
-      expect(helper.to_msys_path('/tmp/cache')).to eq('/tmp/cache')
+    it 'appends a custom data-root' do
+      expect(helper.windows_docker_defender_exclusions('E:\docker')).to include('E:\docker')
     end
   end
 

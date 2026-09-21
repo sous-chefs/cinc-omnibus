@@ -1,5 +1,32 @@
 # Migration Guide
 
+## Migrating from 4.x to 5.x
+
+The 5.0 major release moves Windows omnibus builds into containers: the builds run in the
+`cincproject/omnibus-windows` image (docker-images repository), and a Windows node converged with
+this cookbook is now a **Docker host** (Windows Server 2022+, process isolation), not a builder. The
+breaking changes are:
+
+* **`cinc_omnibus_msys2` resource removed**, along with the vendored MSYS2 signing key. MSYS2 is
+  provisioned by the image's Dockerfile with the same package set, verification and `IgnorePkg`
+  freeze. Wrappers that declared the resource or set `manage_msys2` / `msys2_*` on
+  `cinc_omnibus_builder` must drop them.
+* **`cinc_omnibus_builder` on Windows no longer installs anything build-related.** No Chocolatey
+  build tools (Git, 7-Zip, WiX, Windows SDK 8.1), no `omnibus-toolchain` MSI, no
+  `C:\omnibus\load-omnibus-toolchain.ps1`, no `.gitconfig`, no `C:\omnibus\cache`. It now invokes
+  the new [`cinc_omnibus_docker_host`](documentation/cinc_omnibus_docker_host.md) resource (Containers
+  feature, Defender, `docker-engine`) and `cinc_omnibus_gitlab_runner`. Existing pet builders are
+  not migrated in place: re-image the host and register a `docker-windows` runner.
+* **Windows-specific defaults dropped.** `build_user_home`, `cache_dir`, `toolchain_install_dir`
+  and `build_user_shell` no longer have Windows values; `git_safe_directories` no longer special-cases
+  Windows. `extra_environment` has no effect on Windows (set `ENV` in the image instead).
+* **A Windows converge may request a reboot.** Installing the Containers feature (and removing
+  Defender, if `remove_defender true`) ends the run with a reboot request; the next converge starts
+  Docker. Set `reboot_after_feature_install false` to only warn.
+* **Hyper-V fails the converge** on Windows unless `allow_hyperv true`.
+
+The Linux, macOS and FreeBSD behaviour is unchanged.
+
 ## Migrating from 2.x to 3.x
 
 The 3.0 major release flips the toolchain source to the independent Cinc fork and adds first-class
