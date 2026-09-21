@@ -200,13 +200,11 @@ control 'default' do
   end
 
   if os.windows?
-    # Process isolation needs the Containers feature and no hypervisor.
+    # Process isolation needs the Containers feature. Hyper-V is not asserted
+    # absent: the GitHub Actions image ships it (the test recipe allows it),
+    # and the isolation check below is what its presence could break.
     describe powershell('(Get-WindowsFeature -Name Containers).Installed') do
       its('stdout') { should match(/True/) }
-    end
-
-    describe powershell('[bool]((Get-WindowsFeature -Name Hyper-V -ErrorAction SilentlyContinue).Installed)') do
-      its('stdout') { should match(/False/) }
     end
 
     describe service('docker') do
@@ -222,6 +220,18 @@ control 'default' do
 
     describe command("docker info --format '{{.Isolation}}'") do
       its('stdout') { should match(/^process/) }
+    end
+
+    # The runner service idles as SYSTEM until registered by hand; SYSTEM can
+    # reach the docker named pipe, which the docker-windows executor needs.
+    describe service('gitlab-runner') do
+      it { should be_installed }
+      it { should be_enabled }
+      it { should be_running }
+    end
+
+    describe file('C:\GitLab-Runner') do
+      it { should be_directory }
     end
 
     # Defender steps are skipped once the feature is removed, and
