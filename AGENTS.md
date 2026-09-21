@@ -41,7 +41,13 @@ project's CI; the cookbook's Kitchen suites stay x86_64-only.
 
 The GitHub Actions Windows image already ships Docker (installed by Microsoft's
 `install-docker-ce.ps1`, not Chocolatey) with the Containers feature enabled, so the exec suite
-exercises the adopt-existing-docker path and never triggers the feature-install reboot.
+exercises the adopt-existing-docker path and never triggers the feature-install reboot. It also
+ships the Hyper-V feature, so the test recipe sets `allow_hyperv true` (the guard is unit-tested
+and InSpec asserts process isolation instead) and `reboot_after_feature_install false`: Kitchen
+runs on the host under the exec driver, so a reboot would kill the job. The full fresh-host path (feature install, reboot gate,
+choco `docker-engine`, runner service) is a manual run of the same exec suite on an OpenStack
+`Windows 2022 Server` VM; TESTING.md has the walkthrough. kitchen-openstack has no WinRM support,
+so the VM cannot be driven from a workstation.
 
 ## Build dependencies installed
 
