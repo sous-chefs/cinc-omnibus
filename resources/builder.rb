@@ -85,6 +85,10 @@ action :create do
     creates '/var/db/pkg/repos/FreeBSD/db'
   end
 
+  # Images and idle hosts carry stale indexes whose .debs the archive has since
+  # deleted, and build_essential does not refresh them. At most once a day.
+  apt_update 'cinc-omnibus' if platform_family?('debian')
+
   if new_resource.packages
     if windows?
       # Build tools via chocolatey; MSYS2 (needs pacman) is handled by

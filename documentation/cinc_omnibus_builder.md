@@ -53,7 +53,9 @@ The toolchain package is sourced from the Cinc Project's package mirror via the 
 * **Linux:** installs the `omnibus-toolchain` package via `chef_ingredient`, creates the `omnibus`
   user and group, drops the Docker copy-file Ruby patch at
   `/usr/local/share/ruby-docker-copy-patch.rb`, and on Debian ARM versions older than 12 creates
-  `/usr/bin/mkdir` and `/bin/install` compatibility symlinks.
+  `/usr/bin/mkdir` and `/bin/install` compatibility symlinks. On Debian and Ubuntu it refreshes
+  the apt index (at most once a day) before installing packages, since container images and
+  long-idle hosts carry stale indexes that point at `.deb` files the archive has since deleted.
 * **macOS:** installs Homebrew prerequisites, installs the `omnibus-toolchain` `.pkg`, and creates
   `/usr/local/bin/libtoolize` → Homebrew's `glibtoolize` and `/usr/local/bin/tar` → Homebrew's
   `gtar` (the system `tar` is bsdtar, which rejects GNU options). On Apple Silicon also creates

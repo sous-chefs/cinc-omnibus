@@ -25,6 +25,7 @@ describe 'cinc_omnibus_builder' do
     end
 
     it { expect { chef_run }.to_not raise_error }
+    it { is_expected.to periodic_apt_update('cinc-omnibus') }
     it { is_expected.to install_package(%w(automake binutils bzip2 ca-certificates devscripts dpkg-dev fakeroot git gnupg iproute2 libffi-dev libncurses-dev libssl-dev libtool locales locales-all openjdk-21-jdk-headless openssh-client pkgconf rsync tar tzdata wget zlib1g-dev)) }
     it { is_expected.to install_build_essential('cinc-omnibus') }
     it { is_expected.to remove_package(%w(libpcre2-dev libselinux1-dev)) }
@@ -301,6 +302,7 @@ describe 'cinc_omnibus_builder' do
       it { is_expected.to install_package(pkg) }
     end
     it { is_expected.to create_template('/home/omnibus/load-omnibus-toolchain.sh') }
+    it { is_expected.to_not periodic_apt_update('cinc-omnibus') }
 
     it 'puts the ccache wrappers ahead of the real compilers on PATH' do
       expect(chef_run).to render_file('/home/omnibus/load-omnibus-toolchain.sh')
@@ -320,6 +322,8 @@ describe 'cinc_omnibus_builder' do
     recipe do
       cinc_omnibus_builder 'default'
     end
+
+    it { is_expected.to periodic_apt_update('cinc-omnibus') }
 
     it do
       is_expected.to upgrade_chef_ingredient('omnibus-toolchain').with(
@@ -401,6 +405,7 @@ describe 'cinc_omnibus_builder' do
     end
 
     it { expect { chef_run }.to_not raise_error }
+    it { is_expected.to_not periodic_apt_update('cinc-omnibus') }
     it { is_expected.to install_package(%w(automake bzip2 ca-certificates git glibc-langpack-en glibc-locale-source iproute java-17-openjdk-devel libffi-devel libtool openssh-clients perl-Digest-SHA perl-FindBin perl-IPC-Cmd perl-Time-Piece perl-bignum perl-lib pkgconf rpm-build rpm-sign rsync tar tzdata wget zlib-devel)) }
   end
 
