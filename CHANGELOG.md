@@ -5,6 +5,13 @@
 
 This file is used to list changes made in each version of the cinc-omnibus cookbook.
 
+## [4.3.3](https://github.com/sous-chefs/cinc-omnibus/compare/v4.3.2...v4.3.3) (2026-09-27)
+
+
+### Bug Fixes
+
+* **debian:** refresh the apt index before installing build deps ([#101](https://github.com/sous-chefs/cinc-omnibus/issues/101)) ([c84df0d](https://github.com/sous-chefs/cinc-omnibus/commit/c84df0da2bd8b1d19ff237a02c166b8025c59f8d))
+
 ## [4.3.2](https://github.com/sous-chefs/cinc-omnibus/compare/v4.3.1...v4.3.2) (2026-08-16)
 
 
