@@ -114,7 +114,7 @@ control 'default' do
                 end
     packages << if os_version.to_i == 10 || os_version.to_i == 11 || os_version == '18.04'
                   %w(openjdk-11-jdk-headless)
-                elsif os_version.to_i == 12 || os_version == '20.04'
+                elsif os_version.to_i == 12
                   %w(openjdk-17-jdk-headless)
                 else
                   %w(openjdk-21-jdk-headless)

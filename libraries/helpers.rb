@@ -179,14 +179,7 @@ module CincOmnibus
             'openjdk-21-jdk-headless'
           end
         when 'ubuntu'
-          case node['platform_version']
-          when '18.04'
-            'openjdk-11-jdk-headless'
-          when '20.04'
-            'openjdk-17-jdk-headless'
-          else
-            'openjdk-21-jdk-headless'
-          end
+          'openjdk-21-jdk-headless'
         when 'opensuseleap'
           # Leap 16.0 dropped the Java 11 packages; it ships OpenJDK 21.
           node['platform_version'].to_i >= 16 ? 'java-21-openjdk-devel' : 'java-11-openjdk-devel'
