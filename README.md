@@ -24,16 +24,16 @@ The toolchain package is sourced unconditionally from the Cinc Project's mirror 
 * CentOS Stream 9+
 * Debian 12+
 * Fedora
-* FreeBSD 13+
-* macOS 14+
+* FreeBSD 14+
+* macOS 15+
 * Oracle Linux 8+
 * Red Hat Enterprise Linux 8+
 * Rocky Linux 8+
-* SUSE Linux Enterprise
-* Ubuntu 20.04+
+* SUSE Linux Enterprise Server 15 and 16, including the SLE BCI container images (`registry.suse.com/bci/bci-base`)
+* Ubuntu 22.04+
 * Windows Server 2022+ (as a Docker host for the `cincproject/omnibus-windows` image)
 
-Current Kitchen verification covers AlmaLinux 8/9/10, Amazon Linux 2023, CentOS Stream 9/10, Debian 12/13, Fedora latest, openSUSE Leap 15/16, Oracle Linux 8/9, Rocky Linux 8/9/10, and Ubuntu 20.04/22.04/24.04/26.04. macOS, FreeBSD, and Windows are exercised via `kitchen.exec.yml` against real builder hosts.
+Current Kitchen verification covers AlmaLinux 8/9/10, Amazon Linux 2023, CentOS Stream 9/10, Debian 12/13, Fedora latest, openSUSE Leap 15/16, Oracle Linux 8/9, Rocky Linux 8/9/10, and Ubuntu 22.04/24.04/26.04. macOS, FreeBSD, and Windows are exercised via `kitchen.exec.yml` against real builder hosts.
 
 ## Resources
 

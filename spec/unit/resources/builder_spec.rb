@@ -82,7 +82,7 @@ describe 'cinc_omnibus_builder' do
       )
     end
 
-    it { is_expected.to install_package(%w(automake bzip2 curl git glibc-i18ndata glibc-locale gzip hostname iproute2 java-11-openjdk-devel libffi-devel libtool ncurses-devel openssh pkgconf rpm-build rsync tar timezone wget zlib-devel)) }
+    it { is_expected.to install_package(%w(automake bzip2 curl gawk git glibc-i18ndata glibc-locale gzip hostname iproute2 java-11-openjdk-devel libffi-devel libtool ncurses-devel openssh pkg-config rpm-build rsync tar timezone wget zlib-devel)) }
   end
 
   context 'on opensuse leap 16' do
@@ -93,7 +93,39 @@ describe 'cinc_omnibus_builder' do
     end
 
     it { expect { chef_run }.to_not raise_error }
-    it { is_expected.to install_package(%w(automake bzip2 curl git glibc-i18ndata glibc-locale gzip hostname iproute2 java-21-openjdk-devel libffi-devel libtool ncurses-devel openssh pkgconf rpm-build rsync tar timezone wget zlib-devel)) }
+    it { is_expected.to install_package(%w(automake bzip2 curl gawk git glibc-i18ndata glibc-locale gzip hostname iproute2 java-21-openjdk-devel libffi-devel libtool ncurses-devel openssh pkgconf-pkg-config rpm-build rsync tar timezone wget zlib-devel)) }
+  end
+
+  # SLES and the SLE BCI images: ohai reports platform suse (os-release ID sles).
+  context 'on sles 15' do
+    platform 'suse', '15'
+
+    recipe do
+      cinc_omnibus_builder 'default'
+    end
+
+    it { expect { chef_run }.to_not raise_error }
+    it { is_expected.to install_package(%w(automake bzip2 curl gawk git glibc-i18ndata glibc-locale gzip hostname iproute2 java-21-openjdk-devel libffi-devel libtool ncurses-devel openssh pkg-config rpm-build rsync tar timezone wget zlib-devel)) }
+
+    it do
+      is_expected.to upgrade_chef_ingredient('omnibus-toolchain').with(
+        platform: nil,
+        platform_version_compatibility_mode: true
+      )
+    end
+  end
+
+  # Fauxhai has no SLES 16 data, so reuse the 15 profile with its version bumped.
+  context 'on sles 16' do
+    platform 'suse', '15'
+    automatic_attributes['platform_version'] = '16.0'
+
+    recipe do
+      cinc_omnibus_builder 'default'
+    end
+
+    it { expect { chef_run }.to_not raise_error }
+    it { is_expected.to install_package(%w(automake bzip2 curl gawk git glibc-i18ndata glibc-locale gzip hostname iproute2 java-21-openjdk-devel libffi-devel libtool ncurses-devel openssh pkgconf-pkg-config rpm-build rsync tar timezone wget zlib-devel)) }
   end
 
   # Windows builds run in the cincproject/omnibus-windows image, so the host

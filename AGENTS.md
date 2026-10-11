@@ -32,7 +32,7 @@ Supported platforms and architectures track the build matrix of the upstream Cin
 
 | Suite | Driver | Platforms |
 | --- | --- | --- |
-| `kitchen.dokken.yml` | docker/dokken | AlmaLinux 8/9/10, Amazon Linux 2023, CentOS Stream 9/10, Debian 12/13, Fedora latest, openSUSE Leap 15, Oracle Linux 8/9, Rocky Linux 8/9/10, Ubuntu 20.04/22.04/24.04/26.04 |
+| `kitchen.dokken.yml` | docker/dokken | AlmaLinux 8/9/10, Amazon Linux 2023, CentOS Stream 9/10, Debian 12/13, Fedora latest, openSUSE Leap 15/16, Oracle Linux 8/9, Rocky Linux 8/9/10, Ubuntu 22.04/24.04/26.04 |
 | `kitchen.yml` | vagrant | All of the above plus FreeBSD 14 and Windows Server 2022 for local end-to-end verification |
 | `kitchen.exec.yml` | exec (runner) | `macos-latest` and `windows-latest` (GHA-driven); `freebsd-latest` for self-hosted runs |
 
