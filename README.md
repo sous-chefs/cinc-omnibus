@@ -29,7 +29,7 @@ The toolchain package is sourced unconditionally from the Cinc Project's mirror 
 * Oracle Linux 8+
 * Red Hat Enterprise Linux 8+
 * Rocky Linux 8+
-* SUSE Linux Enterprise
+* SUSE Linux Enterprise Server 15 and 16, including the SLE BCI container images (`registry.suse.com/bci/bci-base`)
 * Ubuntu 20.04+
 * Windows Server 2022+ (as a Docker host for the `cincproject/omnibus-windows` image)
 

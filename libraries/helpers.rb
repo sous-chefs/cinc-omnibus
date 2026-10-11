@@ -101,6 +101,7 @@ module CincOmnibus
             automake
             bzip2
             curl
+            gawk
             git
             glibc-i18ndata
             glibc-locale
@@ -111,7 +112,6 @@ module CincOmnibus
             libtool
             ncurses-devel
             openssh
-            pkgconf
             rpm-build
             rsync
             tar
@@ -119,6 +119,9 @@ module CincOmnibus
             wget
             zlib-devel
           )
+          # The SLE BCI 15 repo has no pkgconf; on 16 pkg-config is only a capability,
+          # which Chef's zypper provider (zypper info) cannot resolve.
+          pkgs << (node['platform_version'].to_i >= 16 ? 'pkgconf-pkg-config' : 'pkg-config')
           pkgs.append(omnibus_java_pkg)
           pkgs.flatten.sort
         when 'mac_os_x'
@@ -187,6 +190,9 @@ module CincOmnibus
         when 'opensuseleap'
           # Leap 16.0 dropped the Java 11 packages; it ships OpenJDK 21.
           node['platform_version'].to_i >= 16 ? 'java-21-openjdk-devel' : 'java-11-openjdk-devel'
+        when 'suse'
+          # SLES and SLE BCI (ohai maps os-release ID sles to suse) carry no Java 11.
+          'java-21-openjdk-devel'
         end
       end
 

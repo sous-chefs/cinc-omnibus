@@ -119,11 +119,12 @@ control 'default' do
                 else
                   %w(openjdk-21-jdk-headless)
                 end
-  when 'opensuse'
+  when 'opensuse', 'suse'
     packages = %w(
       automake
       bzip2
       curl
+      gawk
       git
       glibc-i18ndata
       glibc-locale
@@ -134,7 +135,6 @@ control 'default' do
       libtool
       ncurses-devel
       openssh
-      pkgconf
       rpm-build
       rsync
       tar
@@ -142,8 +142,9 @@ control 'default' do
       wget
       zlib-devel
     )
-    # Leap 16.0 dropped the Java 11 packages; it ships OpenJDK 21.
-    packages << if os_version.to_i >= 16
+    packages << (os_version.to_i >= 16 ? %w(pkgconf-pkg-config) : %w(pkg-config))
+    # Leap 16.0 and SLES dropped the Java 11 packages; they ship OpenJDK 21.
+    packages << if os_version.to_i >= 16 || os.name == 'suse'
                   %w(java-21-openjdk-devel)
                 else
                   %w(java-11-openjdk-devel)
