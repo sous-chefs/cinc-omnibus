@@ -5,6 +5,13 @@
 
 This file is used to list changes made in each version of the cinc-omnibus cookbook.
 
+## [5.0.1](https://github.com/sous-chefs/cinc-omnibus/compare/v5.0.0...v5.0.1) (2026-10-11)
+
+
+### Bug Fixes
+
+* **suse:** support SLE BCI builders ([03c939a](https://github.com/sous-chefs/cinc-omnibus/commit/03c939a3443cf553e0dcb1b669b502a9fa16edd8))
+
 ## [5.0.0](https://github.com/sous-chefs/cinc-omnibus/compare/v4.3.3...v5.0.0) (2026-09-27)
 
 
