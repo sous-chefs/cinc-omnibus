@@ -176,6 +176,7 @@ control 'default' do
       openssl@3
       pkgconf
       readline
+      xz
     )
   else
     packages = []

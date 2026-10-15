@@ -136,6 +136,7 @@ module CincOmnibus
             openssl@3
             pkgconf
             readline
+            xz
           )
         when 'freebsd'
           %w(
