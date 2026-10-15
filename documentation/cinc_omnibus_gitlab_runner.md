@@ -110,11 +110,22 @@ builds run in Docker containers and the runner lives on the Docker host, not the
 
 ### Windows
 
-* **Install:** `chocolatey_package 'gitlab-runner'` (matching the cookbook's existing chocolatey
-  usage). The package drops the binary and a PATH shim without creating a service by default.
-* **Service:** installed with `gitlab-runner install` under the **Built-in System Account**
-  (headless, no password) pointed at `windows_install_dir`, then enabled and started. A Windows
-  service is non-interactive (no GUI), which is correct for headless omnibus builds.
+* **Install:** `chocolatey_package 'gitlab-runner'` with `/InstallDir:<windows_install_dir>`, so
+  the binary lands next to its `config.toml`. The package also puts a shim on PATH; the service is
+  never registered through it, since the SCM would start the shim and the real runner, a child of
+  it, could not reach the service controller.
+* **Service:** installed with `<windows_install_dir>\gitlab-runner.exe install` under the
+  **Built-in System Account** (headless, no password) pointed at `windows_install_dir`, then enabled
+  and started. A service registered against any other binary is replaced. Docker's named pipe
+  (`\\.\pipe\docker_engine`) grants LocalSystem by default, which is what the `docker-windows`
+  executor needs; no `docker-users` membership is required.
+* **Two runners, one service.** The host is a Docker host prepared by
+  [`cinc_omnibus_docker_host`](cinc_omnibus_docker_host.md); register a `shell` (PowerShell) runner
+  that builds the `cincproject/omnibus-windows` image (no Docker-in-Docker on Windows) and a
+  `docker-windows` runner that runs the product builds in it. Both are `[[runners]]` entries in the
+  same `config.toml` under `windows_install_dir`; `runner-config.example.toml` in the docker-images
+  repository is the reference (`pull_policy = ["if-not-present", "always"]`, `isolation =
+  "process"`, per-job `cpus`/`memory`, and `builds_dir`/`cache_dir`/`volumes` on `c:`).
 
 ## Examples
 

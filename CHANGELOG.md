@@ -5,6 +5,31 @@
 
 This file is used to list changes made in each version of the cinc-omnibus cookbook.
 
+## [5.0.1](https://github.com/sous-chefs/cinc-omnibus/compare/v5.0.0...v5.0.1) (2026-10-11)
+
+
+### Bug Fixes
+
+* **suse:** support SLE BCI builders ([03c939a](https://github.com/sous-chefs/cinc-omnibus/commit/03c939a3443cf553e0dcb1b669b502a9fa16edd8))
+
+## [5.0.0](https://github.com/sous-chefs/cinc-omnibus/compare/v4.3.3...v5.0.0) (2026-09-27)
+
+
+### ⚠ BREAKING CHANGES
+
+* **windows:** cinc_omnibus_msys2 and the builder's manage_msys2/msys2_* properties are gone, and cinc_omnibus_builder on Windows no longer installs the toolchain or build tools. Windows Server 2022+ only; the first converge requests a reboot.
+
+### Features
+
+* **windows:** prepare a Docker host instead of a pet builder ([#100](https://github.com/sous-chefs/cinc-omnibus/issues/100)) ([3b01657](https://github.com/sous-chefs/cinc-omnibus/commit/3b0165781720e10a4ac810f1db0987fb7f3733aa))
+
+## [4.3.3](https://github.com/sous-chefs/cinc-omnibus/compare/v4.3.2...v4.3.3) (2026-09-27)
+
+
+### Bug Fixes
+
+* **debian:** refresh the apt index before installing build deps ([#101](https://github.com/sous-chefs/cinc-omnibus/issues/101)) ([c84df0d](https://github.com/sous-chefs/cinc-omnibus/commit/c84df0da2bd8b1d19ff237a02c166b8025c59f8d))
+
 ## [4.3.2](https://github.com/sous-chefs/cinc-omnibus/compare/v4.3.1...v4.3.2) (2026-08-16)
 
 

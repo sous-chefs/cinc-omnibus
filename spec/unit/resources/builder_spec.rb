@@ -5,10 +5,7 @@ require 'spec_helper'
 describe 'cinc_omnibus_builder' do
   step_into :cinc_omnibus_builder
 
-  # Windows scans the mirror for the base archive date; stub the HTTP GET.
   before do
-    allow_any_instance_of(Chef::HTTP::Simple).to receive(:get)
-      .and_return('msys2-base-x86_64-20260611.sfx.exe')
     # macOS build-user SSH-access grant guards (unused off macOS): SACL present
     # (restricted Remote Login) and the build user not yet a member.
     allow_any_instance_of(CincOmnibus::Cookbook::Helpers)
@@ -25,6 +22,7 @@ describe 'cinc_omnibus_builder' do
     end
 
     it { expect { chef_run }.to_not raise_error }
+    it { is_expected.to periodic_apt_update('cinc-omnibus') }
     it { is_expected.to install_package(%w(automake binutils bzip2 ca-certificates devscripts dpkg-dev fakeroot git gnupg iproute2 libffi-dev libncurses-dev libssl-dev libtool locales locales-all openjdk-21-jdk-headless openssh-client pkgconf rsync tar tzdata wget zlib1g-dev)) }
     it { is_expected.to install_build_essential('cinc-omnibus') }
     it { is_expected.to remove_package(%w(libpcre2-dev libselinux1-dev)) }
@@ -84,7 +82,7 @@ describe 'cinc_omnibus_builder' do
       )
     end
 
-    it { is_expected.to install_package(%w(automake bzip2 curl git glibc-i18ndata glibc-locale gzip hostname iproute2 java-11-openjdk-devel libffi-devel libtool ncurses-devel openssh pkgconf rpm-build rsync tar timezone wget zlib-devel)) }
+    it { is_expected.to install_package(%w(automake bzip2 curl gawk git glibc-i18ndata glibc-locale gzip hostname iproute2 java-11-openjdk-devel libffi-devel libtool ncurses-devel openssh pkg-config rpm-build rsync tar timezone wget zlib-devel)) }
   end
 
   context 'on opensuse leap 16' do
@@ -95,9 +93,43 @@ describe 'cinc_omnibus_builder' do
     end
 
     it { expect { chef_run }.to_not raise_error }
-    it { is_expected.to install_package(%w(automake bzip2 curl git glibc-i18ndata glibc-locale gzip hostname iproute2 java-21-openjdk-devel libffi-devel libtool ncurses-devel openssh pkgconf rpm-build rsync tar timezone wget zlib-devel)) }
+    it { is_expected.to install_package(%w(automake bzip2 curl gawk git glibc-i18ndata glibc-locale gzip hostname iproute2 java-21-openjdk-devel libffi-devel libtool ncurses-devel openssh pkgconf-pkg-config rpm-build rsync tar timezone wget zlib-devel)) }
   end
 
+  # SLES and the SLE BCI images: ohai reports platform suse (os-release ID sles).
+  context 'on sles 15' do
+    platform 'suse', '15'
+
+    recipe do
+      cinc_omnibus_builder 'default'
+    end
+
+    it { expect { chef_run }.to_not raise_error }
+    it { is_expected.to install_package(%w(automake bzip2 curl gawk git glibc-i18ndata glibc-locale gzip hostname iproute2 java-21-openjdk-devel libffi-devel libtool ncurses-devel openssh pkg-config rpm-build rsync tar timezone wget zlib-devel)) }
+
+    it do
+      is_expected.to upgrade_chef_ingredient('omnibus-toolchain').with(
+        platform: nil,
+        platform_version_compatibility_mode: true
+      )
+    end
+  end
+
+  # Fauxhai has no SLES 16 data, so reuse the 15 profile with its version bumped.
+  context 'on sles 16' do
+    platform 'suse', '15'
+    automatic_attributes['platform_version'] = '16.0'
+
+    recipe do
+      cinc_omnibus_builder 'default'
+    end
+
+    it { expect { chef_run }.to_not raise_error }
+    it { is_expected.to install_package(%w(automake bzip2 curl gawk git glibc-i18ndata glibc-locale gzip hostname iproute2 java-21-openjdk-devel libffi-devel libtool ncurses-devel openssh pkgconf-pkg-config rpm-build rsync tar timezone wget zlib-devel)) }
+  end
+
+  # Windows builds run in the cincproject/omnibus-windows image, so the host
+  # is prepared as a Docker host rather than getting the build tools.
   context 'on windows' do
     platform 'windows'
 
@@ -105,48 +137,81 @@ describe 'cinc_omnibus_builder' do
       cinc_omnibus_builder 'default'
     end
 
-    it do
-      is_expected.to install_chef_ingredient('omnibus-toolchain').with(
-        rubygems_url: 'https://rubygems.cinc.sh',
-        version: 'latest',
-        channel: :stable,
-        architecture: 'x86_64',
-        platform: nil,
-        platform_version_compatibility_mode: true
-      )
-    end
-
-    it { is_expected.to install_chocolatey_installer('install') }
-    it { is_expected.to install_chocolatey_package('wixtoolset') }
-    it { is_expected.to install_chocolatey_package('7zip') }
-    it { is_expected.to install_chocolatey_package('git') }
-    it { is_expected.to install_chocolatey_package('windows-sdk-8.1') }
-    # MSYS2 is managed by cinc_omnibus_msys2 (needs pacman), not choco.
-    it { is_expected.to_not install_chocolatey_package('msys2') }
-    it { is_expected.to install_cinc_omnibus_msys2('default') }
-    it { is_expected.to create_cinc_omnibus_gitlab_runner('default') }
+    it { expect { chef_run }.to_not raise_error }
 
     # File::ALT_SEPARATOR is nil on Linux (the chefspec host) so
     # windows_safe_path_join leaves forward slashes in place.
-    it { is_expected.to create_template('C:/omnibus/load-omnibus-toolchain.ps1') }
-
-    it 'puts the build tools on PATH in the load shim' do
-      expect(chef_run).to render_file('C:/omnibus/load-omnibus-toolchain.ps1')
-        .with_content(%r{\$env:PATH="C:/Program Files \(x86\)/WiX Toolset v3\.14/bin;.*;\$env:PATH"})
+    it 'prepares the Docker host, excluding the runner dir from Defender too' do
+      expect(chef_run).to create_cinc_omnibus_docker_host('default').with(
+        defender_exclusions: ['C:/ProgramData/docker', 'C:/Program Files/docker', 'C:/GitLab-Runner'],
+        disable_defender_realtime: true,
+        remove_defender: false,
+        reboot_after_feature_install: true
+      )
     end
 
-    it 'keeps MSYS2 on PATH even though it is not choco-managed' do
-      expect(chef_run).to render_file('C:/omnibus/load-omnibus-toolchain.ps1')
-        .with_content(%r{C:/msys64/ucrt64/bin})
-    end
+    it { is_expected.to create_cinc_omnibus_gitlab_runner('default') }
 
+    # Everything below lives in the container image now.
+    it { is_expected.to_not install_chef_ingredient('omnibus-toolchain') }
+    it { is_expected.to_not install_chocolatey_package('wixtoolset') }
+    it { is_expected.to_not install_chocolatey_package('git') }
     it { is_expected.to_not install_build_essential('cinc-omnibus') }
     it { is_expected.to_not create_group('omnibus') }
     it { is_expected.to_not create_user('omnibus') }
+    it { is_expected.to_not create_template(/load-omnibus-toolchain/) }
+    it { is_expected.to_not create_template(/\.gitconfig/) }
+  end
 
-    # No sudo step to accommodate, and a drive letter would need escaping in a
-    # git config value.
-    it { is_expected.to_not render_file('C:/omnibus/.gitconfig').with_content(/^\[safe\]$/) }
+  context 'on windows with docker host options' do
+    platform 'windows'
+
+    recipe do
+      cinc_omnibus_builder 'default' do
+        docker_data_root 'E:\docker'
+        docker_engine_version '29.8.1'
+        remove_defender true
+        manage_gitlab_runner false
+      end
+    end
+
+    it 'passes them through and adds the data-root to the exclusions' do
+      expect(chef_run).to create_cinc_omnibus_docker_host('default').with(
+        docker_data_root: 'E:\docker',
+        docker_engine_version: '29.8.1',
+        remove_defender: true,
+        defender_exclusions: ['C:/ProgramData/docker', 'C:/Program Files/docker', 'E:\docker', 'C:/GitLab-Runner']
+      )
+    end
+
+    it { is_expected.to_not create_cinc_omnibus_gitlab_runner('default') }
+  end
+
+  context 'on windows with manage_docker_host false' do
+    platform 'windows'
+
+    recipe do
+      cinc_omnibus_builder 'default' do
+        manage_docker_host false
+      end
+    end
+
+    it { is_expected.to_not create_cinc_omnibus_docker_host('default') }
+    it { is_expected.to create_cinc_omnibus_gitlab_runner('default') }
+  end
+
+  context 'with remove action on windows' do
+    platform 'windows'
+
+    recipe do
+      cinc_omnibus_builder 'default' do
+        action :remove
+      end
+    end
+
+    it { is_expected.to remove_cinc_omnibus_docker_host('default') }
+    it { is_expected.to remove_cinc_omnibus_gitlab_runner('default') }
+    it { is_expected.to_not delete_directory(/omnibus/) }
   end
 
   context 'on macos intel' do
@@ -301,6 +366,7 @@ describe 'cinc_omnibus_builder' do
       it { is_expected.to install_package(pkg) }
     end
     it { is_expected.to create_template('/home/omnibus/load-omnibus-toolchain.sh') }
+    it { is_expected.to_not periodic_apt_update('cinc-omnibus') }
 
     it 'puts the ccache wrappers ahead of the real compilers on PATH' do
       expect(chef_run).to render_file('/home/omnibus/load-omnibus-toolchain.sh')
@@ -320,6 +386,8 @@ describe 'cinc_omnibus_builder' do
     recipe do
       cinc_omnibus_builder 'default'
     end
+
+    it { is_expected.to periodic_apt_update('cinc-omnibus') }
 
     it do
       is_expected.to upgrade_chef_ingredient('omnibus-toolchain').with(
@@ -401,6 +469,7 @@ describe 'cinc_omnibus_builder' do
     end
 
     it { expect { chef_run }.to_not raise_error }
+    it { is_expected.to_not periodic_apt_update('cinc-omnibus') }
     it { is_expected.to install_package(%w(automake bzip2 ca-certificates git glibc-langpack-en glibc-locale-source iproute java-17-openjdk-devel libffi-devel libtool openssh-clients perl-Digest-SHA perl-FindBin perl-IPC-Cmd perl-Time-Piece perl-bignum perl-lib pkgconf rpm-build rpm-sign rsync tar tzdata wget zlib-devel)) }
   end
 

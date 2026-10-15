@@ -23,8 +23,7 @@ property :signing_keychain, String,
          default: lazy { ::File.join(build_user_home, 'Library', 'Keychains', 'cinc-omnibus-signing.keychain-db') }
 property :signing_keychain_password, String, default: 'cinc-omnibus', sensitive: true
 
-property :windows_install_dir, String,
-         default: lazy { windows_safe_path_join(windows_system_drive, 'GitLab-Runner') }
+property :windows_install_dir, String, default: lazy { gitlab_runner_windows_install_dir }
 
 property :remove_package, [true, false], default: false
 
@@ -37,7 +36,9 @@ end
 # Registration (`gitlab-runner register`) is intentionally never performed here;
 # it stays a manual step. The service runs idle until a runner is registered.
 action :create do
-  # On Linux the runner lives on the Docker host, not the build node.
+  # On Linux the runner lives on the Docker host, not the build node. Windows
+  # is that Docker host: the service serves both the shell runner that builds
+  # the image and the docker-windows runner that runs the product builds.
   next if linux?
 
   if mac_os_x?
@@ -173,23 +174,36 @@ action :create do
       action [:enable, :start]
     end if new_resource.manage_service
   elsif windows?
+    install_dir = new_resource.windows_install_dir
+    runner_exe = gitlab_runner_windows_exe
+
+    # /InstallDir keeps the binary next to its config. The package also puts a
+    # shim on PATH, which must not become the service binary: the SCM would
+    # start the shim, and the real runner, a child of it, could not reach the
+    # service controller.
     chocolatey_package 'gitlab-runner' do
       version new_resource.version if new_resource.version
+      options %(--params="'/InstallDir:#{install_dir}'")
     end
 
     if new_resource.manage_service
-      install_dir = new_resource.windows_install_dir
-
       directory install_dir
 
-      # Built-in System Account service (headless, no password). Guarded so an
-      # already-installed service isn't reinstalled. Refresh PATH from the
-      # registry first: chocolatey adds the runner's dir to the machine PATH
-      # during this same converge, which the running process won't see yet.
+      # Built-in System Account service (headless, no password); the docker
+      # named pipe grants LocalSystem by default, which the docker-windows
+      # executor needs. A service registered against any other binary (a shim,
+      # an old install dir) is replaced. `exit $LASTEXITCODE` because the
+      # runner logs to stderr on every call, and Windows PowerShell 5.1 turns
+      # that into $? = $false, which Chef's wrapper would report as failure.
       powershell_script 'install gitlab-runner service' do
         code <<~PS1
-          $env:Path = [Environment]::GetEnvironmentVariable('Path', 'Machine') + ';' + [Environment]::GetEnvironmentVariable('Path', 'User')
-          gitlab-runner install --working-directory "#{install_dir}" --config "#{windows_safe_path_join(install_dir, 'config.toml')}"
+          $runner = '#{runner_exe}'
+          if (Get-Service -Name gitlab-runner -ErrorAction SilentlyContinue) {
+            & $runner stop 2>&1 | Out-Null
+            & $runner uninstall 2>&1 | Out-Null
+          }
+          & $runner install --working-directory '#{install_dir}' --config '#{windows_safe_path_join(install_dir, 'config.toml')}'
+          exit $LASTEXITCODE
         PS1
         not_if { gitlab_runner_windows_service_installed? }
       end
@@ -253,10 +267,12 @@ action :remove do
     if new_resource.manage_service
       powershell_script 'uninstall gitlab-runner service' do
         code <<~PS1
-          $env:Path = [Environment]::GetEnvironmentVariable('Path', 'Machine') + ';' + [Environment]::GetEnvironmentVariable('Path', 'User')
-          gitlab-runner stop; gitlab-runner uninstall
+          $runner = '#{gitlab_runner_windows_exe}'
+          & $runner stop 2>&1 | Out-Null
+          & $runner uninstall
+          exit $LASTEXITCODE
         PS1
-        only_if { gitlab_runner_windows_service_installed? }
+        only_if { gitlab_runner_windows_service_exists? }
       end
     end
 

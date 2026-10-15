@@ -6,7 +6,7 @@ describe 'cinc_omnibus_gitlab_runner' do
   step_into :cinc_omnibus_gitlab_runner
 
   # The guards are block form calling Helpers predicates (which shell out at
-  # converge time); stub them like msys2_spec does for its guards.
+  # converge time); stub them like docker_host_spec does for its guards.
   def stub_guard(name, value)
     allow_any_instance_of(CincOmnibus::Cookbook::Helpers).to receive(name).and_return(value)
   end
@@ -194,10 +194,36 @@ describe 'cinc_omnibus_gitlab_runner' do
     before { stub_guard(:gitlab_runner_windows_service_installed?, false) }
 
     it { expect { chef_run }.to_not raise_error }
-    it { is_expected.to install_chocolatey_package('gitlab-runner') }
-    it { is_expected.to run_powershell_script('install gitlab-runner service') }
+
+    # File::ALT_SEPARATOR is nil on Linux (the chefspec host) so
+    # windows_safe_path_join leaves forward slashes in place.
+    it 'pins the binary to the install dir so the service never points at the shim' do
+      is_expected.to install_chocolatey_package('gitlab-runner')
+        .with(options: %(--params="'/InstallDir:C:/GitLab-Runner'"))
+    end
+
+    it 'registers the service from the real binary and exits on its status' do
+      is_expected.to run_powershell_script('install gitlab-runner service')
+        .with(code: %r{\$runner = 'C:/GitLab-Runner/gitlab-runner\.exe'.*& \$runner install --working-directory 'C:/GitLab-Runner' --config 'C:/GitLab-Runner/config\.toml'\n\s*exit \$LASTEXITCODE}m)
+    end
+
     it { is_expected.to enable_service('gitlab-runner') }
     it { is_expected.to start_service('gitlab-runner') }
+  end
+
+  context 'with remove action on windows' do
+    platform 'windows'
+
+    before { stub_guard(:gitlab_runner_windows_service_exists?, true) }
+
+    recipe do
+      cinc_omnibus_gitlab_runner 'default' do
+        action :remove
+      end
+    end
+
+    it { is_expected.to run_powershell_script('uninstall gitlab-runner service').with(code: /& \$runner uninstall/) }
+    it { is_expected.to_not remove_chocolatey_package('gitlab-runner') }
   end
 
   context 'on linux (no-op: runner lives on the Docker host)' do

@@ -8,7 +8,7 @@ name: ci
 
 jobs:
   lint-unit:
-    uses: sous-chefs/.github/.github/workflows/lint-unit.yml@main
+    uses: sous-chefs/.github/.github/workflows/lint-unit.yml@9.0.1
     permissions:
       contents: read
       checks: write
@@ -38,7 +38,6 @@ jobs:
           - rockylinux-8
           - rockylinux-9
           - rockylinux-10
-          - ubuntu-2004
           - ubuntu-2204
           - ubuntu-2404
           - ubuntu-2604
@@ -50,7 +49,7 @@ jobs:
       - name: Check out code
         uses: actions/checkout@v7
       - name: Install Cinc Workstation
-        uses: sous-chefs/.github/.github/actions/install-workstation@main
+        uses: sous-chefs/.github/.github/actions/install-workstation@9.0.1
       - name: Dokken
         uses: actionshub/test-kitchen@3.0.0
         env:
@@ -67,7 +66,7 @@ jobs:
       - name: Check out code
         uses: actions/checkout@v7
       - name: Install Cinc Workstation
-        uses: sous-chefs/.github/.github/actions/install-workstation@main
+        uses: sous-chefs/.github/.github/actions/install-workstation@9.0.1
       - name: Test Kitchen
         shell: powershell
         env:
@@ -83,7 +82,7 @@ jobs:
       - name: Check out code
         uses: actions/checkout@v7
       - name: Install Cinc Workstation
-        uses: sous-chefs/.github/.github/actions/install-workstation@main
+        uses: sous-chefs/.github/.github/actions/install-workstation@9.0.1
       - name: Test Kitchen
         env:
           CHEF_LICENSE: accept-no-persist
