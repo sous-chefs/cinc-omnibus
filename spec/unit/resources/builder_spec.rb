@@ -227,7 +227,7 @@ describe 'cinc_omnibus_builder' do
     end
 
     it { expect { chef_run }.to_not raise_error }
-    it { is_expected.to install_package(%w(autoconf automake git gnu-tar libffi libtool libyaml openssl@3 pkgconf readline)) }
+    it { is_expected.to install_package(%w(autoconf automake git gnu-tar libffi libtool libyaml openssl@3 pkgconf readline xz)) }
     it { is_expected.to create_template('/Users/omnibus/load-omnibus-toolchain.sh') }
     it { is_expected.to_not create_file('/usr/local/share/ruby-docker-copy-patch.rb') }
     it { is_expected.to create_link('/usr/local/bin/libtoolize').with(to: '/usr/local/bin/glibtoolize') }
