@@ -5,6 +5,13 @@
 
 This file is used to list changes made in each version of the cinc-omnibus cookbook.
 
+## [5.0.2](https://github.com/sous-chefs/cinc-omnibus/compare/v5.0.1...v5.0.2) (2026-10-19)
+
+
+### Bug Fixes
+
+* **macos:** install xz so gtar can unpack .tar.xz sources ([#106](https://github.com/sous-chefs/cinc-omnibus/issues/106)) ([c145ebb](https://github.com/sous-chefs/cinc-omnibus/commit/c145ebbc4905f78ad271f9b2b145f74c42326b10))
+
 ## [5.0.1](https://github.com/sous-chefs/cinc-omnibus/compare/v5.0.0...v5.0.1) (2026-10-11)
 
 
